@@ -1,0 +1,154 @@
+{
+  "leagueId": "100807",
+  "leagueName": "PacNation",
+  "provider": "NFL Fantasy",
+  "firstSeason": 2010,
+  "lastSeason": 2025,
+  "seasonCount": 16,
+  "seasons": [
+    {
+      "year": 2025,
+      "champion": "Rancho Cucamonga Centipedes",
+      "championTeamId": "3",
+      "teamCount": 10,
+      "draftPicks": 140,
+      "matchups": 83,
+      "transactions": 2260
+    },
+    {
+      "year": 2024,
+      "champion": "Cayucos Condors",
+      "championTeamId": "3",
+      "teamCount": 10,
+      "draftPicks": 140,
+      "matchups": 83,
+      "transactions": 1978
+    },
+    {
+      "year": 2023,
+      "champion": "Benny and The Jets",
+      "championTeamId": "7",
+      "teamCount": 10,
+      "draftPicks": 150,
+      "matchups": 83,
+      "transactions": 2245
+    },
+    {
+      "year": 2022,
+      "champion": "Stannis the Mannis",
+      "championTeamId": "9",
+      "teamCount": 10,
+      "draftPicks": 160,
+      "matchups": 83,
+      "transactions": 2338
+    },
+    {
+      "year": 2021,
+      "champion": "Goodfellas",
+      "championTeamId": "10",
+      "teamCount": 10,
+      "draftPicks": 160,
+      "matchups": 83,
+      "transactions": 2803
+    },
+    {
+      "year": 2020,
+      "champion": "cookin gurleys",
+      "championTeamId": "4",
+      "teamCount": 10,
+      "draftPicks": 170,
+      "matchups": 78,
+      "transactions": 2350
+    },
+    {
+      "year": 2019,
+      "champion": "Greg the Leg",
+      "championTeamId": "2",
+      "teamCount": 10,
+      "draftPicks": 140,
+      "matchups": 78,
+      "transactions": 2325
+    },
+    {
+      "year": 2018,
+      "champion": "Stannis the Mannis",
+      "championTeamId": "9",
+      "teamCount": 10,
+      "draftPicks": 150,
+      "matchups": 78,
+      "transactions": 1810
+    },
+    {
+      "year": 2017,
+      "champion": "Golden Tate Warriors",
+      "championTeamId": "1",
+      "teamCount": 10,
+      "draftPicks": 150,
+      "matchups": 78,
+      "transactions": 1751
+    },
+    {
+      "year": 2016,
+      "champion": "Baton Rouge Catfish",
+      "championTeamId": "3",
+      "teamCount": 10,
+      "draftPicks": 150,
+      "matchups": 78,
+      "transactions": 1778
+    },
+    {
+      "year": 2015,
+      "champion": "Stannis the Mannis",
+      "championTeamId": "9",
+      "teamCount": 10,
+      "draftPicks": 150,
+      "matchups": 78,
+      "transactions": 2018
+    },
+    {
+      "year": 2014,
+      "champion": "show me them TD's",
+      "championTeamId": "4",
+      "teamCount": 12,
+      "draftPicks": 180,
+      "matchups": 92,
+      "transactions": 2277
+    },
+    {
+      "year": 2013,
+      "champion": "Angry Kangaroos",
+      "championTeamId": "3",
+      "teamCount": 12,
+      "draftPicks": 180,
+      "matchups": 92,
+      "transactions": 1971
+    },
+    {
+      "year": 2012,
+      "champion": "The Dehydrated Camels",
+      "championTeamId": "3",
+      "teamCount": 12,
+      "draftPicks": 180,
+      "matchups": 92,
+      "transactions": 1618
+    },
+    {
+      "year": 2011,
+      "champion": "Washed-up HorseShoe Crabs",
+      "championTeamId": "3",
+      "teamCount": 12,
+      "draftPicks": 180,
+      "matchups": 92,
+      "transactions": 1363
+    },
+    {
+      "year": 2010,
+      "champion": "Wallington Boocheks",
+      "championTeamId": "7",
+      "teamCount": 12,
+      "draftPicks": 180,
+      "matchups": 88,
+      "transactions": 680
+    }
+  ]
+}
