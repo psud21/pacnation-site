@@ -1678,3 +1678,97 @@ footer {
   footer { flex-direction: column; padding: 20px 16px; }
 }
 @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+
+/* ==========================================================================
+   November 2026: trade cards, head-to-head lineups, draft board,
+   sticky standings columns. Kept together so the rules are easy to find.
+   ========================================================================== */
+
+/* Transactions: one card per trade */
+.trade-card { align-items: start; }
+.trade-sides { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px 20px; }
+.trade-sides > div { border-left: 3px solid #cbb9de; padding-left: 10px; }
+.trade-sides small { display: block; color: var(--muted); font-size: 12px; margin-bottom: 3px; }
+.trade-sides strong { display: block; font-size: 13px; line-height: 1.35; }
+
+/* Matchups: two lineups side by side, slot against slot */
+.versus-header { display: grid; grid-template-columns: minmax(0,1fr) auto minmax(0,1fr); gap: 12px; align-items: end; padding-bottom: 14px; border-bottom: 2px solid var(--navy); }
+.versus-team { display: grid; gap: 3px; }
+.versus-team.right { text-align: right; }
+.versus-team strong { font-size: 16px; line-height: 1.2; overflow-wrap: anywhere; }
+.versus-team small { color: var(--muted); font-size: 12px; }
+.versus-team em { font-style: normal; font-size: 28px; font-weight: 750; font-variant-numeric: tabular-nums; color: var(--muted); }
+.versus-team.winner em { color: var(--ink); }
+.versus-team.winner em::after { content: " ✓"; color: var(--gold); font-size: 18px; }
+.versus-vs { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .08em; padding-bottom: 10px; }
+.versus-row { display: grid; grid-template-columns: minmax(0,1fr) 58px 52px 58px minmax(0,1fr); gap: 8px; align-items: center; padding: 8px 0; border-top: 1px solid #e4ded3; }
+.versus-rows .versus-row:first-child { border-top: 0; }
+.versus-row .slot { text-align: center; color: var(--red); font-family: var(--font-mono); font-size: 11px; font-weight: 600; }
+.versus-row em { font-style: normal; font-variant-numeric: tabular-nums; font-size: 13px; color: var(--muted); }
+.versus-row em:nth-child(2) { text-align: right; }
+.versus-row em.better { color: var(--ink); font-weight: 700; }
+.versus-player strong { display: block; font-size: 13px; overflow-wrap: anywhere; }
+.versus-player small { display: block; color: var(--muted); font-size: 11px; margin-top: 2px; }
+.versus-player.right { text-align: right; }
+.versus-player.empty { color: var(--muted); }
+.versus-bench { margin-top: 10px; border-top: 1px solid var(--line); }
+.versus-bench summary { cursor: pointer; font-size: 13px; color: var(--muted); padding: 10px 0; }
+.versus-bench .versus-row { opacity: .8; }
+
+/* Draft: board (rounds x teams) and compact list */
+.draft-controls { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: start; gap: 0 12px; }
+.layout-toggle { display: inline-flex; border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; margin-bottom: 20px; }
+.layout-toggle button { border: 0; background: white; padding: 0 14px; height: 34px; cursor: pointer; font-weight: 600; }
+.layout-toggle button + button { border-left: 1px solid var(--line); }
+.layout-toggle button.active { background: var(--navy); color: white; }
+.draft-board-scroll { padding: 0; }
+.draft-board { display: grid; gap: 4px; width: 100%; }
+.board-corner { background: var(--card); }
+.board-team { padding: 6px 6px 8px; border-bottom: 2px solid var(--navy); }
+.board-team strong { display: block; font-size: 12px; line-height: 1.2; overflow-wrap: anywhere; }
+.board-team small { color: var(--muted); font-size: 11px; }
+.board-round { position: sticky; left: 0; z-index: 1; background: var(--card); display: grid; place-items: center; font-weight: 700; font-size: 12px; color: var(--muted); }
+.board-cell { display: grid; gap: 4px; }
+.board-pick { border-radius: var(--radius); padding: 6px 7px; min-height: 60px; background: var(--pos-bg, #eeeae2); border-left: 4px solid var(--pos, var(--line)); }
+.board-pick small { display: block; font-size: 10px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.board-pick strong { display: block; font-size: 12px; line-height: 1.2; overflow-wrap: anywhere; }
+.board-pick span { display: block; font-size: 10px; color: var(--muted); margin-top: 2px; }
+.board-pick.empty { background: transparent; border: 1px dashed var(--line); }
+.board-pick.dim { opacity: .22; }
+.pos-qb { --pos: #b6463d; --pos-bg: #f7e0dc; }
+.pos-rb { --pos: #3f7a46; --pos-bg: #deecdf; }
+.pos-wr { --pos: #3c5f93; --pos-bg: #dfe7f3; }
+.pos-te { --pos: #b0812a; --pos-bg: #f4e8cb; }
+.pos-k { --pos: #6e4a92; --pos-bg: #e9e1f2; }
+.pos-def { --pos: #5b5f66; --pos-bg: #e5e5e5; }
+.draft-round-heading { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 18px 0 6px; }
+.draft-list > div:first-child .draft-round-heading { margin-top: 4px; }
+.draft-row { display: grid; grid-template-columns: 34px minmax(0,1fr) minmax(0,38%); gap: 10px; align-items: center; padding: 7px 0 7px 10px; border-top: 1px solid var(--line); border-left: 3px solid var(--pos, var(--line)); }
+.draft-row > span { color: var(--muted); font-variant-numeric: tabular-nums; font-size: 13px; }
+.draft-row strong { display: block; font-size: 14px; line-height: 1.25; }
+.draft-row small { color: var(--muted); font-size: 12px; }
+.draft-row p { margin: 0; font-size: 13px; color: var(--muted); text-align: right; overflow-wrap: anywhere; }
+
+/* Standings: rank and team stay visible while the table scrolls sideways */
+.table-scroll.season-standings { padding: 0; }
+.season-standings th:first-child, .season-standings td:first-child { position: sticky; left: 0; z-index: 1; min-width: 64px; width: 64px; }
+.season-standings th:nth-child(2), .season-standings td:nth-child(2) { position: sticky; left: 64px; z-index: 1; border-right: 1px solid var(--line); }
+.season-standings td:first-child, .season-standings td:nth-child(2) { background: var(--card); }
+
+@media (max-width: 760px) {
+  .trade-card .trade-sides { grid-template-columns: 1fr; }
+  .versus-row { grid-template-columns: minmax(0,1fr) 44px 40px 44px minmax(0,1fr); gap: 5px; }
+  .versus-row .slot { font-size: 10px; white-space: nowrap; }
+  .versus-player small { display: none; }
+  .versus-player strong, .versus-row em { font-size: 12px; }
+  .versus-team strong { font-size: 13px; }
+  .versus-team small { font-size: 11px; }
+  .versus-team em { font-size: 21px; }
+  .draft-row { grid-template-columns: 28px minmax(0,1fr) minmax(0,36%); gap: 8px; padding-left: 8px; }
+  .draft-row strong { font-size: 13px; }
+  .draft-row small, .draft-row p { font-size: 11px; }
+  .season-standings th:first-child, .season-standings td:first-child { min-width: 48px; width: 48px; padding-left: 8px; padding-right: 8px; }
+  .season-standings th:nth-child(2), .season-standings td:nth-child(2) { left: 48px; min-width: 140px; max-width: 160px; }
+}
+.transaction-tools { grid-template-columns: 230px 1fr; }
+@media (max-width: 760px) { .transaction-tools { grid-template-columns: 1fr; } }
