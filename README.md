@@ -58,6 +58,20 @@ the archive repository's CI can confirm the published site matches the archive.
 | `app/format.ts` | Number formatting and small shared helpers |
 | `app/globals.css` | All styles (Tailwind base plus hand-written CSS) |
 
+### Styling
+
+`app/globals.css` starts with the design tokens: every colour, text size,
+radius and shadow, defined once in `:root`. Use a token (`var(--line-soft)`,
+`var(--text-sm)`) rather than a literal value. Only the semantic palettes
+(`.pos-*` draft positions, `.bin-*` finish classes, `.type-*` transaction
+types) keep literal colours, in their own classes.
+
+- **Text floor:** nothing renders below `--text-xs` (12px); unsized `<small>`
+  elements are clamped to it.
+- **Links between pages** use `.archive-link` (via the `Link`, `ManagerLink`,
+  `PlayerLink` and `RivalryLink` components). Their underline is blended from
+  the text colour, so it shows on cream and navy alike.
+
 ### URL parameters
 
 | Parameter | Values | Meaning |
