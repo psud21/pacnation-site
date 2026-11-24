@@ -24,7 +24,7 @@ npm run preview   # serve dist/
 Every push to `main` runs `.github/workflows/pages.yml`, which builds the site
 and publishes it to GitHub Pages; nothing else is needed. Pages is configured
 under **Settings → Pages → Source: GitHub Actions**. The workflow sets
-`VITE_SITE_URL` so the social preview image (`og.png`) uses an absolute URL.
+`VITE_SITE_URL` so the social preview image (`og.jpg`) uses an absolute URL.
 
 ## Update the data
 
