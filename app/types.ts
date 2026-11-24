@@ -64,6 +64,7 @@ export type DraftPick = {
   round: number;
   pickInRound: number;
   player: string;
+  playerId?: string | null;
   playerInfo?: string;
   teamId: string;
   team: string;
@@ -116,6 +117,20 @@ export type Career = {
   avgRegular: number;
   avgFinal: number | null;
   finalSamples: number;
+  pointsFor: number;
+  /** Bracket games only (semifinals, final, third place); consolation excluded. */
+  playoffWins: number;
+  playoffLosses: number;
+  /** Appearances in the final ("Championship" / "Fantasy Super Bowl"). */
+  titleGames: number;
+  /** Each week's score compared with every other team's that week. */
+  allPlayWins: number;
+  allPlayLosses: number;
+  allPlayTies: number;
+  /** All-play win share summed over weeks: the wins an average schedule would give. */
+  expectedWins: number;
+  /** Actual wins (ties count half) minus expected wins. */
+  luck: number;
 };
 
 /** A row in the "highs" tables; which point field is set depends on the table. */
@@ -149,4 +164,50 @@ export type Era = {
   activity: Record<string, number>;
   mostMoves: HighRecord[];
   mostTrades: HighRecord[];
+  lowWeeks: HighRecord[];
+  blowouts: MarginGame[];
+  closestGames: MarginGame[];
+  bestPicks: PickValue[];
+  lateRoundPicks: PickValue[];
+};
+
+export type GameSide = { team: string; managerId: string; points: number };
+export type MarginGame = { year: number; week: number; margin: number; tie: boolean; winner: GameSide; loser: GameSide };
+
+/** A draft pick and what the player scored as a starter for the team that drafted him that season. */
+export type PickValue = { year: number; round: number; overall: number; player: string; playerId: string | null; playerInfo?: string; team: string; managerId: string; starts: number; points: number };
+
+/** public/data/managers.json */
+export type ManagerProfile = BookManager & {
+  seasons: ManagerSeason[];
+  bestWeeks: ManagerWeek[];
+  worstWeeks: ManagerWeek[];
+  tradePartners: { managerId: string; trades: number }[];
+  mostDrafted: { player: string; playerId: string | null; picks: number; years: number[] }[];
+  firstPicks: { year: number; round: number; overall: number; player: string; playerId: string | null; playerInfo?: string }[];
+  titleGames: number;
+};
+
+export type ManagerSeason = {
+  year: number; teamId: string; team: string; teamCount: number; final: number | null; rank: number | null;
+  wins: number; losses: number; ties: number; pointsFor: number; pointsAgainst: number; moves?: number; trades?: number;
+};
+
+export type GameKind = "regular" | "playoff" | "consolation";
+export type ManagerWeek = { year: number; week: number; kind: GameKind; team: string; points: number; opponentId: string; opponentPoints: number };
+
+/** public/data/games.json: every scored game once. */
+export type ArchiveGame = { year: number; week: number; kind: GameKind; label: string | null; teams: { managerId: string; team: string; score: number }[] };
+
+/** public/data/players.json */
+export type Player = {
+  id: string;
+  name: string;
+  pos: string | null;
+  drafts: { year: number; round: number; overall: number; managerId: string }[];
+  /** Points as a starter, per manager who started him. */
+  managers: { managerId: string; starts: number; points: number; years: number[] }[];
+  bestWeek: { year: number; week: number; points: number; managerId: string } | null;
+  starts: number;
+  points: number;
 };

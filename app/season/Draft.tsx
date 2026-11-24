@@ -1,4 +1,5 @@
 import { Fragment, useMemo, useState } from "react";
+import { PlayerLink } from "../archive";
 import { lower } from "../format";
 import type { DraftPick, SeasonData } from "../types";
 
@@ -70,7 +71,7 @@ export default function Draft({ season, round, onRound, managerOf }: { season: S
                       {cellPicks.map((pick) => (
                         <div className={`board-pick pos-${position(pick)} ${query && !matches(pick) ? "dim" : ""}`} key={pick.overall} title={`${pick.overall}. ${pick.player} (${pick.playerInfo ?? ""}) to ${pick.team}`}>
                           <small>{pick.overall}</small>
-                          <strong>{pick.player}</strong>
+                          <strong><PlayerLink id={pick.playerId}>{pick.player}</PlayerLink></strong>
                           <span>{pick.playerInfo}</span>
                         </div>
                       ))}
@@ -92,7 +93,7 @@ export default function Draft({ season, round, onRound, managerOf }: { season: S
                 {roundPicks.map((pick) => (
                   <article key={pick.overall} className={`draft-row pos-${position(pick)}`}>
                     <span>{pick.overall}</span>
-                    <div><strong>{pick.player}</strong><small>{pick.playerInfo}</small></div>
+                    <div><strong><PlayerLink id={pick.playerId}>{pick.player}</PlayerLink></strong><small>{pick.playerInfo}</small></div>
                     <p>{pick.team}</p>
                   </article>
                 ))}

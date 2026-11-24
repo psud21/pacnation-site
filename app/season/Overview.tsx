@@ -1,3 +1,4 @@
+import { TeamManagerLink } from "../archive";
 import { formatScore, isWinner, ordinal, recordLabel, score, whole } from "../format";
 import type { SeasonData, SeasonSummary } from "../types";
 
@@ -43,7 +44,7 @@ export default function Overview({ season, summary, managerOf }: { season: Seaso
               <article key={item.place} className={`podium-card place-${item.place}`}>
                 <span className="place-number">{ordinal(item.place)}</span>
                 <h3>{item.team}</h3>
-                <p>{item.manager || managerOf(item.teamId) || "Manager not listed"}</p>
+                <p><TeamManagerLink year={year} teamId={item.teamId}>{item.manager || managerOf(item.teamId) || "Manager not listed"}</TeamManagerLink></p>
                 {item.summary && <small>{item.summary.replace("Reg. Season: ", "")}</small>}
               </article>
             ))}
@@ -75,7 +76,7 @@ export default function Overview({ season, summary, managerOf }: { season: Seaso
             <div className="manager-list">
               {season.managers.map((item) => (
                 <div key={item.teamId}>
-                  <span><strong>{item.manager}</strong><small>{item.team}</small></span>
+                  <span><strong><TeamManagerLink year={year} teamId={item.teamId}>{item.manager}</TeamManagerLink></strong><small>{item.team}</small></span>
                   <span className="manager-stats">{item.moves ?? "—"} moves · {item.trades ?? "—"} trades</span>
                 </div>
               ))}
