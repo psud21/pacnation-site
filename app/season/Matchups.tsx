@@ -52,7 +52,7 @@ function Versus({ teams, lineups }: { teams: TeamScore[]; lineups: Lineup[] }) {
         <div className="versus-row" key={`${pair.slot}-${index}`}>
           <PlayerCell player={pair.left} side="left" />
           <em className={pair.left && pair.right && (pair.left.points ?? 0) > (pair.right.points ?? 0) ? "better" : ""}>{pair.left ? formatScore(pair.left.points) : ""}</em>
-          <span className="slot">{pair.slot}</span>
+          <span className="slot">{pair.slot.replace(/\s+/g, "")}</span>
           <em className={pair.left && pair.right && (pair.right.points ?? 0) > (pair.left.points ?? 0) ? "better" : ""}>{pair.right ? formatScore(pair.right.points) : ""}</em>
           <PlayerCell player={pair.right} side="right" />
         </div>
