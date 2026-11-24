@@ -1,64 +1,252 @@
-"use client";
-
 import { useEffect, useMemo, useState } from "react";
+import type { Career, HighRecord, RecordBookData } from "./types";
 
-type Manager = { id: string; name: string; team: string; label: string; lastSeason: number };
-type Career = { managerId: string; seasons: number; first: number; last: number; titles: number; runnerUp: number; topFour: number; wins: number; losses: number; ties: number; winPct: number; firstPlace: number; avgRegular: number; avgFinal: number; finalSamples: number };
-type High = { year: number; week?: number; team: string; managerId: string; points?: number; pointsFor?: number; moves: number; trades: number; wins: number; losses: number; ties: number };
-type Pair = { managerId: string; opponentId: string; wins: number; losses: number; ties: number };
-type Era = { start: number; end: number; seasonCount: number; careers: Career[]; champions: { year: number; team: string; managerId: string }[]; highSeasons: High[]; highWeeks: High[]; headToHead: Pair[]; verifiedGames: number; drafted: { player: string; picks: number }[]; activity: Record<string, number>; mostMoves: High[]; mostTrades: High[] };
-type Book = { managers: Manager[]; eras: Record<string, Era> };
 const eras = [{ id: "all", label: "All seasons" }, { id: "early", label: "2010–2015" }, { id: "modern", label: "2016–2025" }];
-const sorts = [{ key: "titles", label: "Championships" }, { key: "wins", label: "Regular-season wins" }, { key: "winPct", label: "Win percentage" }, { key: "seasons", label: "Seasons played" }, { key: "runnerUp", label: "Runner-up finishes" }, { key: "topFour", label: "Top-four finishes" }, { key: "firstPlace", label: "Regular-season firsts" }, { key: "avgRegular", label: "Average regular finish" }, { key: "avgFinal", label: "Average final finish" }] as const;
-const points = (n: number | undefined) => n == null ? "—" : n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-let cachedBook: Book | null = null;
+const sorts = [
+  { key: "titles", label: "Championships" },
+  { key: "wins", label: "Regular-season wins" },
+  { key: "winPct", label: "Win percentage" },
+  { key: "seasons", label: "Seasons played" },
+  { key: "runnerUp", label: "Runner-up finishes" },
+  { key: "topFour", label: "Top-four finishes" },
+  { key: "firstPlace", label: "Regular-season firsts" },
+  { key: "avgRegular", label: "Average regular finish" },
+  { key: "avgFinal", label: "Average final finish" },
+] as const;
+type SortKey = (typeof sorts)[number]["key"];
+const careerColumns = ["Manager / latest team", "Seasons", "Titles", "2nd", "Top 4", "W–L–T", "Win %", "Reg. #1", "Avg. reg.", "Avg. final"];
 
+const points = (n: number | undefined) => (n == null ? "—" : n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+const sortValue = (career: Career, key: SortKey) => career[key] ?? 0;
+
+// all-time.json is fetched once per visit.
+let cachedBook: RecordBookData | null = null;
+
+type HighKind = "season" | "week" | "moves" | "trades";
+
+function HighTable({ records, kind, label, onSeason }: { records: HighRecord[]; kind: HighKind; label: (id: string) => string; onSeason: (year: number) => void }) {
+  const heading = kind === "season" ? "Points for" : kind === "week" ? "Points" : kind;
+  const value = (r: HighRecord) => (kind === "season" ? points(r.pointsFor) : kind === "week" ? points(r.points) : r[kind]);
+  return (
+    <div className="table-scroll" role="region" aria-label={`${kind} records`} tabIndex={0}>
+      <table className="compact-table">
+        <thead><tr><th scope="col">Season</th><th scope="col">Team / manager</th><th scope="col">{heading}</th></tr></thead>
+        <tbody>
+          {records.map((r, i) => (
+            <tr key={`${r.year}-${r.managerId}-${r.week}-${i}`}>
+              <td><button className="text-link" onClick={() => onSeason(r.year)}>{r.year}</button>{r.week && <small>Week {r.week}</small>}</td>
+              <td><strong>{r.team}</strong><small>{label(r.managerId)}</small></td>
+              <td className="numeric">{value(r)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+/** The all-time view: champions, careers, head-to-head, highs and activity for one era. */
 export default function RecordBook({ eraKey, onEra, onSeason }: { eraKey: string; onEra: (era: string) => void; onSeason: (year: number) => void }) {
-  const [book, setBook] = useState<Book | null>(cachedBook);
+  const [book, setBook] = useState<RecordBookData | null>(cachedBook);
   const [error, setError] = useState("");
   const [retry, setRetry] = useState(0);
-  const [sort, setSort] = useState<(typeof sorts)[number]["key"]>("titles");
+  const [sort, setSort] = useState<SortKey>("titles");
   const [query, setQuery] = useState("");
   const [minimum, setMinimum] = useState(1);
   const [selectedManager, setSelectedManager] = useState("");
+
   useEffect(() => {
     if (cachedBook) return;
     const controller = new AbortController();
-    fetch("./data/all-time.json", { signal: controller.signal }).then(r => { if (!r.ok) throw new Error("The record book could not be loaded."); return r.json() as Promise<Book>; }).then((data: Book) => { cachedBook = data; setBook(data); }).catch(e => { if (e.name !== "AbortError") setError(e.message); });
+    fetch("./data/all-time.json", { signal: controller.signal })
+      .then((r) => {
+        if (!r.ok) throw new Error("The record book could not be loaded.");
+        return r.json() as Promise<RecordBookData>;
+      })
+      .then((data) => { cachedBook = data; setBook(data); })
+      .catch((e) => { if (e.name !== "AbortError") setError(e.message); });
     return () => controller.abort();
   }, [retry]);
+
   const era = book?.eras[eraKey] ?? book?.eras.all;
-  const managers = useMemo(() => new Map(book?.managers.map(m => [m.id, m]) ?? []), [book]);
+  const managers = useMemo(() => new Map(book?.managers.map((m) => [m.id, m]) ?? []), [book]);
   const label = (id: string) => managers.get(id)?.label ?? "Unidentified manager";
-  const rows = useMemo(() => [...(era?.careers ?? [])].filter(c => c.seasons >= minimum && `${managers.get(c.managerId)?.label} ${managers.get(c.managerId)?.team}`.toLowerCase().includes(query.toLowerCase())).sort((a, b) => (a[sort] - b[sort]) * (sort.startsWith("avg") ? 1 : -1) || (managers.get(a.managerId)?.label ?? "").localeCompare(managers.get(b.managerId)?.label ?? "")), [era, managers, sort, minimum, query]);
-  if (error) return <section className="panel" role="alert"><h1>Record book unavailable</h1><p>{error}</p><button className="action" onClick={() => { setError(""); setRetry(retry + 1); }}>Try again</button></section>;
-  if (!book || !era) return <section className="panel" role="status"><h1>Opening the record book…</h1></section>;
-  const activeManager = era.careers.some(c => c.managerId === selectedManager) ? selectedManager : rows[0]?.managerId ?? era.careers[0]?.managerId;
-  const pairs = era.headToHead.filter(p => p.managerId === activeManager).sort((a, b) => b.wins - a.wins || b.losses - a.losses);
-  function highTable(records: High[], kind: "season" | "week" | "moves" | "trades") {
-    return <div className="table-scroll" role="region" aria-label={`${kind} records`} tabIndex={0}><table className="compact-table"><thead><tr><th scope="col">Season</th><th scope="col">Team / manager</th><th scope="col">{kind === "season" ? "Points for" : kind === "week" ? "Points" : kind}</th></tr></thead><tbody>{records.map((r, i) => <tr key={`${r.year}-${r.managerId}-${r.week}-${i}`}><td><button className="text-link" onClick={() => onSeason(r.year)}>{r.year}</button>{r.week && <small>Week {r.week}</small>}</td><td><strong>{r.team}</strong><small>{label(r.managerId)}</small></td><td className="numeric">{kind === "season" ? points(r.pointsFor) : kind === "week" ? points(r.points) : r[kind]}</td></tr>)}</tbody></table></div>;
+  const rows = useMemo(() => {
+    const direction = sort.startsWith("avg") ? 1 : -1; // Lower average finishes are better.
+    const search = query.toLowerCase();
+    return [...(era?.careers ?? [])]
+      .filter((c) => c.seasons >= minimum && `${managers.get(c.managerId)?.label} ${managers.get(c.managerId)?.team}`.toLowerCase().includes(search))
+      .sort((a, b) => (sortValue(a, sort) - sortValue(b, sort)) * direction || (managers.get(a.managerId)?.label ?? "").localeCompare(managers.get(b.managerId)?.label ?? ""));
+  }, [era, managers, sort, minimum, query]);
+
+  if (error) {
+    return <section className="panel" role="alert"><h1>Record book unavailable</h1><p>{error}</p><button className="action" onClick={() => { setError(""); setRetry(retry + 1); }}>Try again</button></section>;
   }
-  return <div className="content-stack record-book">
-    <header className="book-heading"><h1>Record book</h1></header>
-    <div className="era-bar"><div className="era-picker" aria-label="Record book era">{eras.map(e => <button key={e.id} aria-pressed={eraKey === e.id} className={eraKey === e.id ? "active" : ""} onClick={() => onEra(e.id)}>{e.label}</button>)}</div><p>{era.seasonCount} seasons · {era.careers.length} managers</p></div>
-    <nav className="book-index" aria-label="Record book sections"><a href="#champions">Champions</a><a href="#careers">Career standings</a><a href="#head-to-head">Head to head</a><a href="#highs">Scoring highs</a><a href="#activity">Draft & activity</a><a href="#methodology">About the data</a></nav>
-    <section id="champions" className="panel"><div className="section-heading"><h2>Champions</h2><span>{era.start}–{era.end}</span></div><div className="champions-timeline">{era.champions.map(c => <button key={c.year} onClick={() => onSeason(c.year)} aria-label={`${c.year} champion: ${c.team}, managed by ${label(c.managerId)}`}><span className="champion-year">{c.year}</span><strong>{c.team}</strong><small>{label(c.managerId)}</small><span className="timeline-link" aria-hidden="true">→</span></button>)}</div></section>
-    <section id="careers" className="panel"><div className="section-heading"><h2>Career standings</h2><span>{rows.length} managers shown</span></div><div className="book-tools"><label>Find a manager<input value={query} onChange={e => setQuery(e.target.value)} placeholder="Name or latest team" type="search" /></label><label>Sort by<select value={sort} onChange={e => setSort(e.target.value as typeof sort)}>{sorts.map(s => <option key={s.key} value={s.key}>{s.label}</option>)}</select></label><label>Minimum seasons<select value={minimum} onChange={e => setMinimum(Number(e.target.value))}><option value={1}>All sample sizes</option><option value={3}>3+ seasons</option><option value={5}>5+ seasons</option></select></label></div>
-      <p className="method-note">W–L–T and win %: regular season only.</p>
-      <div className="table-scroll career-scroll" role="region" aria-label="Career standings, scroll horizontally for all statistics" tabIndex={0}><table className="career-table"><thead><tr>{["Manager / latest team", "Seasons", "Titles", "2nd", "Top 4", "W–L–T", "Win %", "Reg. #1", "Avg. reg.", "Avg. final"].map(h => <th key={h} scope="col">{h}</th>)}</tr></thead><tbody>{rows.map(c => <tr key={c.managerId}><th scope="row"><strong>{managers.get(c.managerId)?.name}</strong><small>{managers.get(c.managerId)?.team}</small><small>{c.first}–{c.last}{c.seasons < 3 ? " · Small sample" : ""}</small></th><td>{c.seasons}</td><td className={c.titles ? "title-cell" : ""}>{c.titles}</td><td>{c.runnerUp}</td><td>{c.topFour}</td><td className="nowrap">{c.wins}–{c.losses}–{c.ties}</td><td>{(100 * c.winPct).toFixed(1)}%</td><td>{c.firstPlace}</td><td>{c.avgRegular.toFixed(2)}</td><td>{c.avgFinal?.toFixed(2) ?? "—"}</td></tr>)}</tbody></table></div>{!rows.length && <p role="status">No managers match. Try a different name or minimum season count.</p>}
-      <details className="stats-details"><summary>About these stats</summary><p>Sorted by {sorts.find(s => s.key === sort)?.label.toLowerCase()}, then name for ties. Win % = (wins + ½ ties) ÷ games. Lower average finishes are better.</p><p>“2nd” and “Top 4” use final playoff placement; “Reg. #1” uses regular-season standings. Small sample means fewer than 3 seasons in this era. Average finish is raw placement, not normalized for 10- versus 12-team leagues.</p></details>
-    </section>
-    <section id="head-to-head" className="panel"><div className="section-heading"><h2>Head to head</h2></div><label className="field-label">View from<select value={activeManager} onChange={e => setSelectedManager(e.target.value)}>{[...era.careers].sort((a, b) => label(a.managerId).localeCompare(label(b.managerId))).map(c => <option key={c.managerId} value={c.managerId}>{label(c.managerId)}</option>)}</select></label><p className="method-note">Regular season only · From the selected manager’s perspective.</p><div className="table-scroll" role="region" aria-label="Head-to-head records" tabIndex={0}><table className="compact-table"><thead><tr><th scope="col">Opponent</th><th scope="col">W–L–T</th><th scope="col">Games</th><th scope="col">Win %</th></tr></thead><tbody>{pairs.map(p => { const n = p.wins + p.losses + p.ties; return <tr key={p.opponentId}><td><strong>{label(p.opponentId)}</strong>{n < 5 && <small>Small sample</small>}</td><td>{p.wins}–{p.losses}–{p.ties}</td><td>{n}</td><td>{(100 * (p.wins + p.ties / 2) / n).toFixed(1)}%</td></tr>; })}</tbody></table></div><details className="stats-details"><summary>About these stats</summary><p>Playoffs and consolation are excluded. Small sample means fewer than 5 games. All {era.verifiedGames.toLocaleString()} games in this era reconcile to the archived standings.</p></details></section>
-    <section id="highs"><div className="section-heading"><h2>Scoring highs</h2></div><p className="method-note">Top 10 regular-season scores · Points are not era-adjusted. See season Settings for scoring rules.</p><div className="two-column"><section className="panel"><h3>Highest-scoring seasons</h3>{highTable(era.highSeasons, "season")}</section><section className="panel"><h3>Highest-scoring weeks</h3>{highTable(era.highWeeks, "week")}</section></div></section>
-    <section id="activity"><div className="section-heading"><h2>Draft & activity</h2></div><div className="two-column"><section className="panel"><h3>Most-drafted players & defenses</h3><ol className="ranked-list">{era.drafted.map(p => <li key={p.player}><span>{p.player}</span><strong>{p.picks} picks</strong></li>)}</ol></section><section className="panel"><h3>Activity ledger</h3><p className="method-note">Transaction rows, not unique events; includes lineup changes.</p><dl className="activity-ledger">{Object.entries(era.activity).sort((a, b) => b[1] - a[1]).map(([type, count]) => <div key={type}><dt>{type}</dt><dd>{count.toLocaleString()}</dd></div>)}</dl></section><section className="panel"><h3>Most moves in a season</h3>{highTable(era.mostMoves, "moves")}</section><section className="panel"><h3>Most trades in a season</h3><p className="method-note">Trades count for each participant.</p>{highTable(era.mostTrades, "trades")}</section></div><details className="stats-details"><summary>About these stats</summary><p>Draft counts are archived selections in the selected era, not draft-value grades. Move and trade totals use the NFL owners-page counters, linked through season account identities. In the activity ledger, one trade can produce multiple rows.</p></details></section>
-    <section id="methodology" className="methodology">
-      <h2>About the data</h2>
-      <details className="stats-details"><summary>About these stats</summary>
-        <p>Era filters include only results within the selected years. No strength-of-competition weighting is applied. Teams, scoring rules and season lengths changed over time.</p>
-        <p>Managers are linked across seasons using stable NFL account identities and commissioner-confirmed names. The 24 archived accounts represent 23 managers: Peter Puzio’s 2011 account is combined with his main account by explicit confirmation. Krystian B. and Krystian P., Daniel B. and Daniel F., and Peter Puzio and Peter Polan remain separate people. Co-managers are not credited separately.</p>
-        <p>Career finishes come from final and regular-season standings. Championship history is checked against the NFL almanac. Head-to-head results use weekly schedules and are checked against each team’s W–L–T. Transaction authors use archived account identities, not first-name matching. Missing values are not treated as zero.</p>
-        <p>These are historical records, not a ranking of skill or luck. Confirmed display corrections are applied to public data; the original source archive remains unchanged.</p>
-      </details>
-    </section>
-  </div>;
+  if (!book || !era) return <section className="panel" role="status"><h1>Opening the record book…</h1></section>;
+
+  const activeManager = era.careers.some((c) => c.managerId === selectedManager) ? selectedManager : rows[0]?.managerId ?? era.careers[0]?.managerId;
+  const pairs = era.headToHead.filter((p) => p.managerId === activeManager).sort((a, b) => b.wins - a.wins || b.losses - a.losses);
+  const highTable = (records: HighRecord[], kind: HighKind) => <HighTable records={records} kind={kind} label={label} onSeason={onSeason} />;
+
+  return (
+    <div className="content-stack record-book">
+      <header className="book-heading"><h1>Record book</h1></header>
+      <div className="era-bar">
+        <div className="era-picker" aria-label="Record book era">
+          {eras.map((e) => <button key={e.id} aria-pressed={eraKey === e.id} className={eraKey === e.id ? "active" : ""} onClick={() => onEra(e.id)}>{e.label}</button>)}
+        </div>
+        <p>{era.seasonCount} seasons · {era.careers.length} managers</p>
+      </div>
+      <nav className="book-index" aria-label="Record book sections">
+        <a href="#champions">Champions</a>
+        <a href="#careers">Career standings</a>
+        <a href="#head-to-head">Head to head</a>
+        <a href="#highs">Scoring highs</a>
+        <a href="#activity">Draft & activity</a>
+        <a href="#methodology">About the data</a>
+      </nav>
+
+      <section id="champions" className="panel">
+        <div className="section-heading"><h2>Champions</h2><span>{era.start}–{era.end}</span></div>
+        <div className="champions-timeline">
+          {era.champions.map((c) => (
+            <button key={c.year} onClick={() => onSeason(c.year)} aria-label={`${c.year} champion: ${c.team}, managed by ${label(c.managerId)}`}>
+              <span className="champion-year">{c.year}</span>
+              <strong>{c.team}</strong>
+              <small>{label(c.managerId)}</small>
+              <span className="timeline-link" aria-hidden="true">→</span>
+            </button>
+          ))}
+        </div>
+      </section>
+
+      <section id="careers" className="panel">
+        <div className="section-heading"><h2>Career standings</h2><span>{rows.length} managers shown</span></div>
+        <div className="book-tools">
+          <label>Find a manager<input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Name or latest team" type="search" /></label>
+          <label>Sort by<select value={sort} onChange={(e) => setSort(e.target.value as SortKey)}>{sorts.map((s) => <option key={s.key} value={s.key}>{s.label}</option>)}</select></label>
+          <label>
+            Minimum seasons
+            <select value={minimum} onChange={(e) => setMinimum(Number(e.target.value))}>
+              <option value={1}>All sample sizes</option>
+              <option value={3}>3+ seasons</option>
+              <option value={5}>5+ seasons</option>
+            </select>
+          </label>
+        </div>
+        <p className="method-note">W–L–T and win %: regular season only.</p>
+        <div className="table-scroll career-scroll" role="region" aria-label="Career standings, scroll horizontally for all statistics" tabIndex={0}>
+          <table className="career-table">
+            <thead><tr>{careerColumns.map((h) => <th key={h} scope="col">{h}</th>)}</tr></thead>
+            <tbody>
+              {rows.map((c) => (
+                <tr key={c.managerId}>
+                  <th scope="row">
+                    <strong>{managers.get(c.managerId)?.name}</strong>
+                    <small>{managers.get(c.managerId)?.team}</small>
+                    <small>{c.first}–{c.last}{c.seasons < 3 ? " · Small sample" : ""}</small>
+                  </th>
+                  <td>{c.seasons}</td>
+                  <td className={c.titles ? "title-cell" : ""}>{c.titles}</td>
+                  <td>{c.runnerUp}</td>
+                  <td>{c.topFour}</td>
+                  <td className="nowrap">{c.wins}–{c.losses}–{c.ties}</td>
+                  <td>{(100 * (c.winPct ?? 0)).toFixed(1)}%</td>
+                  <td>{c.firstPlace}</td>
+                  <td>{c.avgRegular.toFixed(2)}</td>
+                  <td>{c.avgFinal?.toFixed(2) ?? "—"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        {!rows.length && <p role="status">No managers match. Try a different name or minimum season count.</p>}
+        <details className="stats-details">
+          <summary>About these stats</summary>
+          <p>Sorted by {sorts.find((s) => s.key === sort)?.label.toLowerCase()}, then name for ties. Win % = (wins + ½ ties) ÷ games. Lower average finishes are better.</p>
+          <p>“2nd” and “Top 4” use final playoff placement; “Reg. #1” uses regular-season standings. Small sample means fewer than 3 seasons in this era. Average finish is raw placement, not normalized for 10- versus 12-team leagues.</p>
+        </details>
+      </section>
+
+      <section id="head-to-head" className="panel">
+        <div className="section-heading"><h2>Head to head</h2></div>
+        <label className="field-label">
+          View from
+          <select value={activeManager} onChange={(e) => setSelectedManager(e.target.value)}>
+            {[...era.careers].sort((a, b) => label(a.managerId).localeCompare(label(b.managerId))).map((c) => <option key={c.managerId} value={c.managerId}>{label(c.managerId)}</option>)}
+          </select>
+        </label>
+        <p className="method-note">Regular season only · From the selected manager’s perspective.</p>
+        <div className="table-scroll" role="region" aria-label="Head-to-head records" tabIndex={0}>
+          <table className="compact-table">
+            <thead><tr><th scope="col">Opponent</th><th scope="col">W–L–T</th><th scope="col">Games</th><th scope="col">Win %</th></tr></thead>
+            <tbody>
+              {pairs.map((p) => {
+                const games = p.wins + p.losses + p.ties;
+                return (
+                  <tr key={p.opponentId}>
+                    <td><strong>{label(p.opponentId)}</strong>{games < 5 && <small>Small sample</small>}</td>
+                    <td>{p.wins}–{p.losses}–{p.ties}</td>
+                    <td>{games}</td>
+                    <td>{((100 * (p.wins + p.ties / 2)) / games).toFixed(1)}%</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+        <details className="stats-details">
+          <summary>About these stats</summary>
+          <p>Playoffs and consolation are excluded. Small sample means fewer than 5 games. All {era.verifiedGames.toLocaleString()} games in this era reconcile to the archived standings.</p>
+        </details>
+      </section>
+
+      <section id="highs">
+        <div className="section-heading"><h2>Scoring highs</h2></div>
+        <p className="method-note">Top 10 regular-season scores · Points are not era-adjusted. See season Settings for scoring rules.</p>
+        <div className="two-column">
+          <section className="panel"><h3>Highest-scoring seasons</h3>{highTable(era.highSeasons, "season")}</section>
+          <section className="panel"><h3>Highest-scoring weeks</h3>{highTable(era.highWeeks, "week")}</section>
+        </div>
+      </section>
+
+      <section id="activity">
+        <div className="section-heading"><h2>Draft & activity</h2></div>
+        <div className="two-column">
+          <section className="panel">
+            <h3>Most-drafted players & defenses</h3>
+            <ol className="ranked-list">{era.drafted.map((p) => <li key={p.player}><span>{p.player}</span><strong>{p.picks} picks</strong></li>)}</ol>
+          </section>
+          <section className="panel">
+            <h3>Activity ledger</h3>
+            <p className="method-note">Transaction rows, not unique events; includes lineup changes.</p>
+            <dl className="activity-ledger">
+              {Object.entries(era.activity).sort((a, b) => b[1] - a[1]).map(([type, count]) => <div key={type}><dt>{type}</dt><dd>{count.toLocaleString()}</dd></div>)}
+            </dl>
+          </section>
+          <section className="panel"><h3>Most moves in a season</h3>{highTable(era.mostMoves, "moves")}</section>
+          <section className="panel">
+            <h3>Most trades in a season</h3>
+            <p className="method-note">Trades count for each participant.</p>
+            {highTable(era.mostTrades, "trades")}
+          </section>
+        </div>
+        <details className="stats-details">
+          <summary>About these stats</summary>
+          <p>Draft counts are archived selections in the selected era, not draft-value grades. Move and trade totals use the NFL owners-page counters, linked through season account identities. In the activity ledger, one trade can produce multiple rows.</p>
+        </details>
+      </section>
+
+      <section id="methodology" className="methodology">
+        <h2>About the data</h2>
+        <details className="stats-details">
+          <summary>About these stats</summary>
+          <p>Era filters include only results within the selected years. No strength-of-competition weighting is applied. Teams, scoring rules and season lengths changed over time.</p>
+          <p>Managers are linked across seasons using stable NFL account identities and commissioner-confirmed names. The 24 archived accounts represent 23 managers: Peter Puzio’s 2011 account is combined with his main account by explicit confirmation. Krystian B. and Krystian P., Daniel B. and Daniel F., and Peter Puzio and Peter Polan remain separate people. Co-managers are not credited separately.</p>
+          <p>Career finishes come from final and regular-season standings. Championship history is checked against the NFL almanac. Head-to-head results use weekly schedules and are checked against each team’s W–L–T. Transaction authors use archived account identities, not first-name matching. Missing values are not treated as zero.</p>
+          <p>These are historical records, not a ranking of skill or luck. Confirmed display corrections are applied to public data; the original source archive remains unchanged.</p>
+        </details>
+      </section>
+    </div>
+  );
 }

@@ -1,15 +1,68 @@
-# PacNation League Archive
+# PacNation League Archive — website
 
-Sixteen seasons of PacNation fantasy football history, from 2010 through 2025. Browse the all-time record book, standings, draft boards, matchups, lineups, transactions, and league settings. The website uses the JSON files in `public/data` and can run on any static web host.
+Sixteen seasons of PacNation fantasy football history (2010–2025), preserved
+from NFL Fantasy. Live at **https://psud21.github.io/pacnation-site/**.
 
-## Publish with GitHub Pages
-
-1. Put the contents of this folder at the root of a GitHub repository on the `main` branch. Include the hidden `.github` folder.
-2. Open **Settings → Pages**. Under **Build and deployment**, select **GitHub Actions** as the source.
-3. In **Actions → Deploy PacNation Archive**, choose **Run workflow**. Open the deployment URL reported by the workflow once it succeeds. Subsequent pushes to `main` deploy automatically.
-
-For a repository named `pacnation-archive`, the default site address is `https://YOUR-USERNAME.github.io/pacnation-archive/`. Existing season and record-book query parameters work when carried over to the new site URL.
+The site is a static React app with no server and no database: it reads the JSON
+files in `public/data/`. Those files are **generated** by the private archive
+repository ([psud21/pacnation-archive](https://github.com/psud21/pacnation-archive)),
+which holds the raw NFL pages and the pipeline. Don't edit them by hand.
 
 ## Run locally
 
-Use Node.js 24 and run `npm ci` followed by `npm run dev`. For a production build, run `npm run build`. The static output is in `dist`. Set `VITE_SITE_URL` to the full public site URL to use its social preview image on an alternate static host.
+Requires Node.js 22.13+ (the deploy uses Node 24).
+
+```powershell
+npm ci
+npm run dev       # http://localhost:5173
+npm run build     # type-check, then write the static site to dist/
+npm run preview   # serve dist/
+```
+
+## Deploy
+
+Every push to `main` runs `.github/workflows/pages.yml`, which builds the site
+and publishes it to GitHub Pages; nothing else is needed. Pages is configured
+under **Settings → Pages → Source: GitHub Actions**. The workflow sets
+`VITE_SITE_URL` so the social preview image (`og.png`) uses an absolute URL.
+
+## Update the data
+
+In the archive repository:
+
+```powershell
+python -m src.rebuild --compare ..\pacnation-site\public\data
+```
+
+That rebuilds everything from the raw archive into `build/site-data/` and lists
+what would change. To publish, copy that folder's contents over `public/data/`
+here, commit and push. `.gitattributes` keeps the data files byte-for-byte so
+the archive repository's CI can confirm the published site matches the archive.
+
+## Code layout
+
+| File | What it does |
+|---|---|
+| `index.html` | Page shell, meta tags and fonts |
+| `app/main.tsx` | Mounts the app |
+| `app/App.tsx` | Layout, season rail and routing; loads `index.json` and season files |
+| `app/useArchiveQuery.ts` | Keeps page state in the URL so links, reloads and Back/Forward work |
+| `app/RecordBook.tsx` | All-time view: champions, careers, head-to-head, highs and activity |
+| `app/season/*.tsx` | One component per season tab (Overview, Standings, Draft, Matchups, Transactions, Settings) |
+| `app/types.ts` | Types for the JSON files in `public/data/` |
+| `app/format.ts` | Number formatting and small shared helpers |
+| `app/globals.css` | All styles (Tailwind base plus hand-written CSS) |
+
+### URL parameters
+
+| Parameter | Values | Meaning |
+|---|---|---|
+| `view` | `all-time` (default), `season` | Record book or a single season |
+| `era` | `all`, `early` (2010–2015), `modern` (2016–2025) | Record-book era |
+| `year` | `2010`–`2025` | Season (defaults to the latest) |
+| `section` | `Overview`, `Standings`, `Draft`, `Matchups`, `Transactions`, `Settings` | Season tab |
+| `week`, `game` | week number, matchup ID | Selected matchup on the Matchups tab |
+| `round` | `0` (all) or a round number | Draft board filter |
+
+Search boxes and the transaction type filter are not in the URL; they reset when
+you change tab or season.
