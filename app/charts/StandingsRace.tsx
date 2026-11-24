@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent } from "react";
+import { useLayoutEffect, useMemo, useState, type KeyboardEvent, type PointerEvent } from "react";
 import type { SeasonData } from "../types";
 
 // Emphasis form: the selected team in the accent ink, every other team in a
@@ -30,19 +30,30 @@ function raceLines(season: SeasonData): { weeks: number[]; lines: Line[] } {
   return { weeks, lines };
 }
 
-/** Width of the plot container, measured from the moment the element mounts (null until then). */
+/**
+ * Width of the plot container (null until measured). The element is kept in
+ * state so the effect re-runs whenever React attaches a new one; it measures
+ * synchronously on mount, then follows container and window resizes.
+ */
 function useWidth() {
+  const [element, setElement] = useState<HTMLDivElement | null>(null);
   const [width, setWidth] = useState<number | null>(null);
-  const observer = useRef<ResizeObserver | null>(null);
-  const ref = useCallback((element: HTMLDivElement | null) => {
-    observer.current?.disconnect();
-    observer.current = null;
+  useLayoutEffect(() => {
     if (!element) return;
-    observer.current = new ResizeObserver(([entry]) => setWidth(Math.max(280, Math.round(entry.contentRect.width))));
-    observer.current.observe(element);
-  }, []);
-  useEffect(() => () => observer.current?.disconnect(), []);
-  return { ref, width };
+    const measure = () => {
+      const measured = Math.round(element.getBoundingClientRect().width);
+      if (measured > 0) setWidth(Math.max(280, measured));
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(element);
+    window.addEventListener("resize", measure);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", measure);
+    };
+  }, [element]);
+  return { ref: setElement, width };
 }
 
 const fmt = (wins: number) => (Number.isInteger(wins) ? String(wins) : wins.toFixed(1));
