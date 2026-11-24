@@ -1,4 +1,3 @@
-"use client";
 import { useEffect, useState } from "react";
 
 // URLs are the source of navigation state; pushState makes Back/Forward useful.
