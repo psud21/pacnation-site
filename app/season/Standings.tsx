@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { TeamManagerLink } from "../archive";
+import StandingsRace from "../charts/StandingsRace";
 import { lower, score } from "../format";
 import type { SeasonData } from "../types";
 
@@ -20,7 +22,7 @@ export default function Standings({ season, managerOf }: { season: SeasonData; m
             {rows.map((item) => (
               <tr key={item.teamId}>
                 <td><span className="rank-chip">{item.rank}</span></td>
-                <td><strong>{item.team}</strong><small>{managerOf(item.teamId)}</small></td>
+                <td><strong>{item.team}</strong><small><TeamManagerLink year={season.year} teamId={item.teamId}>{managerOf(item.teamId)}</TeamManagerLink></small></td>
                 <td>{item.wins}-{item.losses}-{item.ties}</td>
                 <td>{item.winPct?.toFixed(3).replace(/^0/, "")}</td>
                 <td>{score.format(item.pointsFor)}</td>
@@ -37,6 +39,7 @@ export default function Standings({ season, managerOf }: { season: SeasonData; m
         <summary>About these stats</summary>
         <p>Records and points are regular season only. Reg. rank is before the playoffs; Final is placement after the postseason. PF = points for; PA = points against.</p>
       </details>
+      <StandingsRace season={season} />
     </section>
   );
 }

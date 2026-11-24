@@ -45,11 +45,16 @@ the archive repository's CI can confirm the published site matches the archive.
 |---|---|
 | `index.html` | Page shell, meta tags and fonts |
 | `app/main.tsx` | Mounts the app |
-| `app/App.tsx` | Layout, season rail and routing; loads `index.json` and season files |
+| `app/App.tsx` | Layout, rail and routing; loads `index.json`, `managers.json` and season files |
+| `app/archive.tsx` | Shared context and the links between pages (manager, rivalry, player, season) |
+| `app/data.ts` | Loads each JSON file once per visit |
+| `app/managers/*.tsx` | Managers index, manager profile and rivalry pages |
+| `app/players/Players.tsx` | Player search and player pages |
+| `app/charts/*.tsx` | The finish-history strip and the standings-race chart (plain SVG/HTML, no chart library) |
 | `app/useArchiveQuery.ts` | Keeps page state in the URL so links, reloads and Back/Forward work |
 | `app/RecordBook.tsx` | All-time view: champions, careers, head-to-head, highs and activity |
 | `app/season/*.tsx` | One component per season tab (Overview, Standings, Draft, Matchups, Transactions, Settings) |
-| `app/types.ts` | Types for the JSON files in `public/data/` |
+| `app/types.ts` | Types for the JSON files in `public/data/` (definitions: `docs/DATA.md` in the archive repository) |
 | `app/format.ts` | Number formatting and small shared helpers |
 | `app/globals.css` | All styles (Tailwind base plus hand-written CSS) |
 
@@ -57,7 +62,9 @@ the archive repository's CI can confirm the published site matches the archive.
 
 | Parameter | Values | Meaning |
 |---|---|---|
-| `view` | `all-time` (default), `season` | Record book or a single season |
+| `view` | `all-time` (default), `season`, `managers`, `manager`, `rivalry`, `players`, `player` | Which page |
+| `id` | manager key (`manager-07`) or NFL player ID | The manager or player shown |
+| `a`, `b` | manager keys | The two sides of a rivalry |
 | `era` | `all`, `early` (2010–2015), `modern` (2016–2025) | Record-book era |
 | `year` | `2010`–`2025` | Season (defaults to the latest) |
 | `section` | `Overview`, `Standings`, `Draft`, `Matchups`, `Transactions`, `Settings` | Season tab |

@@ -1,5 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
-import type { Career, HighRecord, RecordBookData } from "./types";
+import { useMemo, useState } from "react";
+import { ManagerLink, PlayerLink, RivalryLink, SeasonLink } from "./archive";
+import { useJson } from "./data";
+import { formatScore } from "./format";
+import type { Career, HighRecord, MarginGame, PickValue, RecordBookData } from "./types";
 
 const eras = [{ id: "all", label: "All seasons" }, { id: "early", label: "2010–2015" }, { id: "modern", label: "2016–2025" }];
 const sorts = [
@@ -19,9 +22,6 @@ const careerColumns = ["Manager / latest team", "Seasons", "Titles", "2nd", "Top
 const points = (n: number | undefined) => (n == null ? "—" : n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
 const sortValue = (career: Career, key: SortKey) => career[key] ?? 0;
 
-// all-time.json is fetched once per visit.
-let cachedBook: RecordBookData | null = null;
-
 type HighKind = "season" | "week" | "moves" | "trades";
 
 function HighTable({ records, kind, label, onSeason }: { records: HighRecord[]; kind: HighKind; label: (id: string) => string; onSeason: (year: number) => void }) {
@@ -35,8 +35,47 @@ function HighTable({ records, kind, label, onSeason }: { records: HighRecord[]; 
           {records.map((r, i) => (
             <tr key={`${r.year}-${r.managerId}-${r.week}-${i}`}>
               <td><button className="text-link" onClick={() => onSeason(r.year)}>{r.year}</button>{r.week && <small>Week {r.week}</small>}</td>
-              <td><strong>{r.team}</strong><small>{label(r.managerId)}</small></td>
+              <td><strong>{r.team}</strong><small><ManagerLink id={r.managerId}>{label(r.managerId)}</ManagerLink></small></td>
               <td className="numeric">{value(r)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function MarginTable({ games, label }: { games: MarginGame[]; label: string }) {
+  return (
+    <div className="table-scroll" role="region" aria-label={label} tabIndex={0}>
+      <table className="compact-table">
+        <thead><tr><th scope="col">Week</th><th scope="col">Winner</th><th scope="col">Loser</th><th scope="col">Margin</th></tr></thead>
+        <tbody>
+          {games.map((g, i) => (
+            <tr key={`${g.year}-${g.week}-${i}`}>
+              <td><SeasonLink year={g.year} section="Matchups" week={g.week}>{g.year} W{g.week}</SeasonLink></td>
+              <td><strong>{formatScore(g.winner.points)}</strong><small><ManagerLink id={g.winner.managerId} /></small></td>
+              <td><strong>{formatScore(g.loser.points)}</strong><small><ManagerLink id={g.loser.managerId} /></small></td>
+              <td className="numeric">{g.tie ? "Tie" : formatScore(g.margin)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function PickTable({ picks, label }: { picks: PickValue[]; label: string }) {
+  return (
+    <div className="table-scroll" role="region" aria-label={label} tabIndex={0}>
+      <table className="compact-table">
+        <thead><tr><th scope="col">Season</th><th scope="col">Pick</th><th scope="col">Points</th></tr></thead>
+        <tbody>
+          {picks.map((p) => (
+            <tr key={`${p.year}-${p.overall}`}>
+              <td><SeasonLink year={p.year} section="Draft">{p.year}</SeasonLink><small>R{p.round} · #{p.overall}</small></td>
+              <td><strong><PlayerLink id={p.playerId}>{p.player}</PlayerLink></strong><small><ManagerLink id={p.managerId} /></small></td>
+              <td className="numeric"><strong>{formatScore(p.points)}</strong><small>{p.starts} starts</small></td>
             </tr>
           ))}
         </tbody>
@@ -47,26 +86,11 @@ function HighTable({ records, kind, label, onSeason }: { records: HighRecord[]; 
 
 /** The all-time view: champions, careers, head-to-head, highs and activity for one era. */
 export default function RecordBook({ eraKey, onEra, onSeason }: { eraKey: string; onEra: (era: string) => void; onSeason: (year: number) => void }) {
-  const [book, setBook] = useState<RecordBookData | null>(cachedBook);
-  const [error, setError] = useState("");
-  const [retry, setRetry] = useState(0);
+  const { data: book, error, retry } = useJson<RecordBookData>("all-time.json");
   const [sort, setSort] = useState<SortKey>("titles");
   const [query, setQuery] = useState("");
   const [minimum, setMinimum] = useState(1);
   const [selectedManager, setSelectedManager] = useState("");
-
-  useEffect(() => {
-    if (cachedBook) return;
-    const controller = new AbortController();
-    fetch("./data/all-time.json", { signal: controller.signal })
-      .then((r) => {
-        if (!r.ok) throw new Error("The record book could not be loaded.");
-        return r.json() as Promise<RecordBookData>;
-      })
-      .then((data) => { cachedBook = data; setBook(data); })
-      .catch((e) => { if (e.name !== "AbortError") setError(e.message); });
-    return () => controller.abort();
-  }, [retry]);
 
   const era = book?.eras[eraKey] ?? book?.eras.all;
   const managers = useMemo(() => new Map(book?.managers.map((m) => [m.id, m]) ?? []), [book]);
@@ -80,7 +104,7 @@ export default function RecordBook({ eraKey, onEra, onSeason }: { eraKey: string
   }, [era, managers, sort, minimum, query]);
 
   if (error) {
-    return <section className="panel" role="alert"><h1>Record book unavailable</h1><p>{error}</p><button className="action" onClick={() => { setError(""); setRetry(retry + 1); }}>Try again</button></section>;
+    return <section className="panel" role="alert"><h1>Record book unavailable</h1><p>{error}</p><button className="action" onClick={retry}>Try again</button></section>;
   }
   if (!book || !era) return <section className="panel" role="status"><h1>Opening the record book…</h1></section>;
 
@@ -101,7 +125,9 @@ export default function RecordBook({ eraKey, onEra, onSeason }: { eraKey: string
         <a href="#champions">Champions</a>
         <a href="#careers">Career standings</a>
         <a href="#head-to-head">Head to head</a>
-        <a href="#highs">Scoring highs</a>
+        <a href="#playoffs">Playoffs & luck</a>
+        <a href="#highs">Highs & lows</a>
+        <a href="#draft-value">Draft value</a>
         <a href="#activity">Draft & activity</a>
         <a href="#methodology">About the data</a>
       </nav>
@@ -142,7 +168,7 @@ export default function RecordBook({ eraKey, onEra, onSeason }: { eraKey: string
               {rows.map((c) => (
                 <tr key={c.managerId}>
                   <th scope="row">
-                    <strong>{managers.get(c.managerId)?.name}</strong>
+                    <strong><ManagerLink id={c.managerId}>{managers.get(c.managerId)?.name}</ManagerLink></strong>
                     <small>{managers.get(c.managerId)?.team}</small>
                     <small>{c.first}–{c.last}{c.seasons < 3 ? " · Small sample" : ""}</small>
                   </th>
@@ -185,7 +211,7 @@ export default function RecordBook({ eraKey, onEra, onSeason }: { eraKey: string
                 const games = p.wins + p.losses + p.ties;
                 return (
                   <tr key={p.opponentId}>
-                    <td><strong>{label(p.opponentId)}</strong>{games < 5 && <small>Small sample</small>}</td>
+                    <td><strong><RivalryLink a={activeManager} b={p.opponentId}>{label(p.opponentId)}</RivalryLink></strong>{games < 5 && <small>Small sample</small>}</td>
                     <td>{p.wins}–{p.losses}–{p.ties}</td>
                     <td>{games}</td>
                     <td>{((100 * (p.wins + p.ties / 2)) / games).toFixed(1)}%</td>
@@ -201,12 +227,68 @@ export default function RecordBook({ eraKey, onEra, onSeason }: { eraKey: string
         </details>
       </section>
 
+      <section id="playoffs">
+        <div className="section-heading"><h2>Playoffs & luck</h2></div>
+        <div className="two-column">
+          <section className="panel">
+            <h3>Playoff records</h3>
+            <div className="table-scroll" role="region" aria-label="Playoff records" tabIndex={0}>
+              <table className="compact-table">
+                <thead><tr><th scope="col">Manager</th><th scope="col">W–L</th><th scope="col">Title games</th><th scope="col">Titles</th></tr></thead>
+                <tbody>
+                  {[...era.careers].filter((c) => c.playoffWins + c.playoffLosses > 0)
+                    .sort((a, b) => b.titles - a.titles || b.playoffWins - a.playoffWins || a.playoffLosses - b.playoffLosses || label(a.managerId).localeCompare(label(b.managerId)))
+                    .map((c) => (
+                      <tr key={c.managerId}><td><ManagerLink id={c.managerId} /></td><td className="nowrap">{c.playoffWins}–{c.playoffLosses}</td><td>{c.titleGames}</td><td className={c.titles ? "title-cell" : ""}>{c.titles}</td></tr>
+                    ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+          <section className="panel">
+            <h3>Luck</h3>
+            <div className="table-scroll" role="region" aria-label="Luck" tabIndex={0}>
+              <table className="compact-table">
+                <thead><tr><th scope="col">Manager</th><th scope="col">Wins</th><th scope="col">Expected</th><th scope="col">Luck</th></tr></thead>
+                <tbody>
+                  {[...era.careers].sort((a, b) => b.luck - a.luck || label(a.managerId).localeCompare(label(b.managerId))).map((c) => (
+                    <tr key={c.managerId}>
+                      <td><ManagerLink id={c.managerId} /><small>All-play {c.allPlayWins}–{c.allPlayLosses}{c.allPlayTies ? `–${c.allPlayTies}` : ""}</small></td>
+                      <td>{c.wins + c.ties / 2}</td>
+                      <td>{c.expectedWins.toFixed(1)}</td>
+                      <td className="numeric"><strong>{c.luck > 0 ? "+" : c.luck < 0 ? "−" : ""}{Math.abs(c.luck).toFixed(1)}</strong></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        </div>
+        <details className="stats-details">
+          <summary>About these stats</summary>
+          <p>Playoff records count bracket games only: semifinals, the final and the third-place game. Consolation games are excluded. Title games are appearances in the final.</p>
+          <p>All-play compares each week's score with every other team's score that week, as if you had played everyone. Expected wins add up each week's all-play win share. Luck is actual regular-season wins (ties count half) minus expected wins. Positive means the schedule helped. Across the league, luck sums to zero.</p>
+        </details>
+      </section>
+
       <section id="highs">
-        <div className="section-heading"><h2>Scoring highs</h2></div>
-        <p className="method-note">Top 10 regular-season scores · Points are not era-adjusted. See season Settings for scoring rules.</p>
+        <div className="section-heading"><h2>Highs & lows</h2></div>
+        <p className="method-note">Top 10 regular-season results · Points are not era-adjusted. See season Settings for scoring rules.</p>
         <div className="two-column">
           <section className="panel"><h3>Highest-scoring seasons</h3>{highTable(era.highSeasons, "season")}</section>
           <section className="panel"><h3>Highest-scoring weeks</h3>{highTable(era.highWeeks, "week")}</section>
+          <section className="panel"><h3>Lowest-scoring weeks</h3>{highTable(era.lowWeeks, "week")}</section>
+          <section className="panel"><h3>Biggest blowouts</h3><MarginTable games={era.blowouts} label="Biggest blowouts" /></section>
+          <section className="panel"><h3>Closest games</h3><MarginTable games={era.closestGames} label="Closest games" /></section>
+        </div>
+      </section>
+
+      <section id="draft-value">
+        <div className="section-heading"><h2>Draft value</h2></div>
+        <p className="method-note">Points each pick scored as a starter for the team that drafted him that season, playoffs included.</p>
+        <div className="two-column">
+          <section className="panel"><h3>Best picks</h3><PickTable picks={era.bestPicks} label="Best picks" /></section>
+          <section className="panel"><h3>Best late-round picks (round 8+)</h3><PickTable picks={era.lateRoundPicks} label="Best late-round picks" /></section>
         </div>
       </section>
 

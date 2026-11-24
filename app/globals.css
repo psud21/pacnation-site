@@ -1772,3 +1772,103 @@ footer {
 }
 .transaction-tools { grid-template-columns: 230px 1fr; }
 @media (max-width: 760px) { .transaction-tools { grid-template-columns: 1fr; } }
+
+/* ==========================================================================
+   November 2026: manager, rivalry and player pages; finish strip; race chart
+   ========================================================================== */
+
+/* Links between pages: ink text, underlined so tables stay calm */
+.archive-link { color: inherit; text-decoration: underline; text-decoration-color: var(--line); text-decoration-thickness: 1px; text-underline-offset: 3px; }
+.archive-link:hover, .archive-link:focus-visible { color: var(--red); text-decoration-color: currentColor; }
+
+/* Rail: three section buttons */
+.rail-nav { display: grid; gap: 4px; margin-bottom: 12px; }
+
+/* Page headings and summary tiles */
+.profile-heading { border-bottom: 4px solid var(--navy); padding-bottom: 14px; }
+.profile-heading h1 { margin: 4px 0 6px; }
+.profile-heading p { margin: 0; color: var(--muted); font-size: 14px; }
+.versus-word { color: var(--muted); font-weight: 500; font-size: .6em; margin: 0 .2em; }
+.stat-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); border: 1px solid var(--line); background: var(--card); border-radius: var(--radius); }
+.stat-tiles > div { display: flex; flex-direction: column; gap: 3px; padding: 14px 16px; border-right: 1px solid var(--line); }
+.stat-tiles > div:last-child { border-right: 0; }
+.stat-tiles span { color: var(--muted); font-size: 12px; }
+.stat-tiles strong { font-size: 24px; font-weight: 750; letter-spacing: -.02em; }
+.stat-tiles small { color: var(--muted); font-size: 12px; }
+.compact-table td small, .compact-table th small { display: block; }
+.winner-cell strong::after { content: " \2713"; color: var(--gold); }
+.rivalry-pickers { display: flex; flex-wrap: wrap; align-items: end; gap: 10px; margin-top: 14px; }
+.rivalry-pickers label { display: grid; gap: 4px; font-size: 13px; color: var(--muted); }
+.rivalry-pickers select { height: 40px; border: 1px solid var(--line); background: white; padding: 0 10px; min-width: 200px; border-radius: var(--radius); color: var(--ink); }
+.rivalry-pickers .action { height: 40px; }
+
+/* Managers index */
+.manager-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+.manager-card { display: grid; gap: 4px; padding: 16px; background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); color: inherit; text-decoration: none; }
+.manager-card:hover, .manager-card:focus-visible { border-color: var(--navy); box-shadow: inset 3px 0 0 var(--navy); }
+.manager-card-head { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
+.manager-card-head strong { font-size: 16px; }
+.manager-card small { color: var(--muted); font-size: 12px; }
+.title-count { font-size: 12px; font-weight: 700; color: var(--navy); background: var(--gold-soft); padding: 2px 8px; border-radius: 999px; white-space: nowrap; }
+.manager-card .finish-strip { margin-top: 8px; }
+
+/* Finish strip: one cell per season on a validated one-hue navy ramp */
+.bin-champion { --bin: #0c1830; --bin-ink: #ffffff; }
+.bin-second { --bin: #2e4877; --bin-ink: #ffffff; }
+.bin-top4 { --bin: #536b9b; --bin-ink: #ffffff; }
+.bin-middle { --bin: #7a8fb7; --bin-ink: #111827; }
+.bin-bottom { --bin: #a3b3d0; --bin-ink: #111827; }
+.finish-strip { display: grid; gap: 2px; margin: 4px 0 10px; }
+.finish-col { display: grid; gap: 4px; min-width: 0; text-align: center; }
+.finish-col small { font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.finish-cell { position: relative; display: grid; place-items: center; height: 34px; border-radius: 4px; background: var(--bin, transparent); color: var(--bin-ink, var(--muted)); }
+.finish-cell b { font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.finish-cell.empty { background: transparent; box-shadow: inset 0 0 0 1px var(--line); }
+.finish-strip.compact .finish-cell { height: 14px; border-radius: 3px; }
+.finish-cell[data-tip]:hover::after, .finish-cell[data-tip]:focus-visible::after {
+  content: attr(data-tip); position: absolute; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%); z-index: 5;
+  width: max-content; max-width: 240px; padding: 8px 10px; border-radius: var(--radius); background: var(--navy); color: white;
+  font-size: 12px; font-weight: 500; line-height: 1.35; text-align: left; white-space: normal; pointer-events: none;
+}
+.finish-cell:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+.finish-legend { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 0 0 14px; padding: 0; list-style: none; font-size: 12px; color: var(--muted); }
+.finish-legend li { display: flex; align-items: center; gap: 6px; }
+.finish-swatch { width: 14px; height: 14px; border-radius: 3px; background: var(--bin); }
+
+/* Standings race: emphasis line chart */
+.race { margin: 26px 0 0; padding-top: 18px; border-top: 1px solid var(--line); }
+.race h3 { margin: 0 0 4px; font-size: 18px; }
+.race-legend { display: flex; flex-wrap: wrap; gap: 6px; margin: 12px 0 8px; }
+.race-legend button { display: inline-flex; align-items: center; gap: 8px; padding: 5px 10px; border: 1px solid var(--line); border-radius: 999px; background: white; font-size: 12px; cursor: pointer; color: var(--ink); }
+.race-legend button.active { border-color: var(--navy); box-shadow: inset 0 0 0 1px var(--navy); font-weight: 700; }
+.race-legend i, .race-tip i { display: inline-block; width: 14px; height: 2px; border-radius: 1px; flex: none; }
+.race-legend button.active i { height: 3px; }
+.race-plot { position: relative; width: 100%; }
+.race-plot svg { display: block; overflow: visible; }
+.race-plot svg:focus-visible { outline: 2px solid var(--gold); outline-offset: 4px; }
+.race-grid { stroke: #ebe6dc; stroke-width: 1; }
+.race-tick { fill: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+.race-label { fill: var(--ink); font-size: 12px; font-weight: 700; }
+.race-crosshair { stroke: var(--muted); stroke-width: 1; }
+.race-tip { position: absolute; top: 6px; z-index: 4; width: 200px; padding: 10px 12px; background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: 0 6px 18px rgba(12, 24, 48, .12); pointer-events: none; font-size: 12px; }
+.race-tip strong { display: block; margin-bottom: 6px; }
+.race-tip span { display: grid; grid-template-columns: 14px 28px minmax(0,1fr); align-items: center; gap: 6px; padding: 1px 0; color: var(--muted); }
+.race-tip span b { color: var(--ink); text-align: right; font-variant-numeric: tabular-nums; }
+.race-tip span.focus { color: var(--ink); font-weight: 700; }
+.race-table th[scope="row"] { white-space: nowrap; }
+
+@media (max-width: 760px) {
+  .rail-nav { grid-column: 1 / -1; grid-template-columns: repeat(3, minmax(0, 1fr)); margin: 0; }
+  .rail-nav .book-button { justify-content: center; text-align: center; padding: 10px 4px; }
+  .season-select { grid-column: 1 / -1; }
+  .stat-tiles { grid-template-columns: 1fr 1fr; }
+  .stat-tiles > div { border-bottom: 1px solid var(--line); }
+  .stat-tiles > div:nth-child(2n) { border-right: 0; }
+  .stat-tiles strong { font-size: 20px; }
+  .finish-col small { font-size: 9px; }
+  .finish-cell { height: 28px; }
+  .finish-cell b { font-size: 11px; }
+  .rivalry-pickers select { min-width: 0; width: 100%; }
+  .rivalry-pickers label { flex: 1 1 130px; }
+  .race-tip { width: 180px; }
+}

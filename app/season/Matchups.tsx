@@ -1,4 +1,5 @@
 import { useMemo, useRef } from "react";
+import { PlayerLink } from "../archive";
 import { formatScore, isWinner } from "../format";
 import type { Lineup, PlayerLine, SeasonData, TeamScore } from "../types";
 
@@ -23,7 +24,7 @@ function PlayerCell({ player, side }: { player?: PlayerLine; side: "left" | "rig
   if (!player) return <span className={`versus-player ${side} empty`}>—</span>;
   return (
     <span className={`versus-player ${side}`}>
-      <strong>{player.player}</strong>
+      <strong><PlayerLink id={player.playerId}>{player.player}</PlayerLink></strong>
       <small>{[player.playerInfo, player.opponent].filter(Boolean).join(" · ")}</small>
     </span>
   );
