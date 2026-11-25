@@ -1,11 +1,10 @@
 import { useMemo, useState } from "react";
 import { ManagerLink, PlayerLink, RivalryLink, SeasonLink } from "./archive";
-import Badge from "./Badge";
+import Tabbed from "./Tabbed";
 import { useJson } from "./data";
 import { formatScore } from "./format";
 import type { Career, HighRecord, MarginGame, PickValue, RecordBookData } from "./types";
 
-const eras = [{ id: "all", label: "All seasons" }, { id: "early", label: "2010–2015" }, { id: "modern", label: "2016–2025" }];
 const sorts = [
   { key: "titles", label: "Championships" },
   { key: "wins", label: "Regular-season wins" },
@@ -85,15 +84,15 @@ function PickTable({ picks, label }: { picks: PickValue[]; label: string }) {
   );
 }
 
-/** The all-time view: champions, careers, head-to-head, highs and activity for one era. */
-export default function RecordBook({ eraKey, onEra, onSeason }: { eraKey: string; onEra: (era: string) => void; onSeason: (year: number) => void }) {
+/** The all-time record book: champions, careers, head-to-head, playoffs and luck, highs, draft and activity. */
+export default function RecordBook({ onSeason }: { onSeason: (year: number) => void }) {
   const { data: book, error, retry } = useJson<RecordBookData>("all-time.json");
   const [sort, setSort] = useState<SortKey>("titles");
   const [query, setQuery] = useState("");
   const [minimum, setMinimum] = useState(1);
   const [selectedManager, setSelectedManager] = useState("");
 
-  const era = book?.eras[eraKey] ?? book?.eras.all;
+  const era = book?.eras.all;
   const managers = useMemo(() => new Map(book?.managers.map((m) => [m.id, m]) ?? []), [book]);
   const label = (id: string) => managers.get(id)?.label ?? "Unidentified manager";
   const rows = useMemo(() => {
@@ -112,39 +111,47 @@ export default function RecordBook({ eraKey, onEra, onSeason }: { eraKey: string
   const activeManager = era.careers.some((c) => c.managerId === selectedManager) ? selectedManager : rows[0]?.managerId ?? era.careers[0]?.managerId;
   const pairs = era.headToHead.filter((p) => p.managerId === activeManager).sort((a, b) => b.wins - a.wins || b.losses - a.losses);
   const highTable = (records: HighRecord[], kind: HighKind) => <HighTable records={records} kind={kind} label={label} onSeason={onSeason} />;
+  const titleCounts = [...era.careers].filter((c) => c.titles > 0).sort((a, b) => b.titles - a.titles || label(a.managerId).localeCompare(label(b.managerId)));
+  const champions = [...era.champions].sort((a, b) => b.year - a.year);
 
   return (
     <div className="content-stack record-book">
-      <header className="book-heading"><h1>Record book</h1></header>
-      <div className="era-bar">
-        <div className="era-picker" aria-label="Record book era">
-          {eras.map((e) => <button key={e.id} aria-pressed={eraKey === e.id} className={eraKey === e.id ? "active" : ""} onClick={() => onEra(e.id)}>{e.label}</button>)}
-        </div>
-        <p>{era.seasonCount} seasons · {era.careers.length} managers</p>
-      </div>
+      <header className="book-heading">
+        <h1>Record book</h1>
+        <p className="book-meta">{era.start}–{era.end} · {era.seasonCount} seasons · {era.careers.length} managers · {era.verifiedGames.toLocaleString()} regular-season games verified</p>
+      </header>
       <nav className="book-index" aria-label="Record book sections">
         <a href="#champions">Champions</a>
-        <a href="#careers">Career standings</a>
+        <a href="#careers">Careers</a>
         <a href="#head-to-head">Head to head</a>
         <a href="#playoffs">Playoffs & luck</a>
         <a href="#highs">Highs & lows</a>
-        <a href="#draft-value">Draft value</a>
-        <a href="#activity">Draft & activity</a>
-        <a href="#methodology">About the data</a>
+        <a href="#draft">Draft</a>
+        <a href="#activity">Activity</a>
+        <a href="#methodology">About</a>
       </nav>
 
       <section id="champions" className="panel">
-        <div className="section-heading"><h2>Champions</h2><span>{era.start}–{era.end}</span></div>
-        <div className="champions-timeline">
-          {era.champions.map((c) => (
-            <button key={c.year} onClick={() => onSeason(c.year)} aria-label={`${c.year} champion: ${c.team}, managed by ${label(c.managerId)}`}>
-              <span className="champion-year">{c.year}</span>
-              <strong>{c.team}</strong>
-              <small className="with-badge">{managers.get(c.managerId) && <Badge id={c.managerId} name={managers.get(c.managerId)!.name} />}{label(c.managerId)}</small>
-              <span className="timeline-link" aria-hidden="true">→</span>
-            </button>
+        <div className="section-heading"><h2>Champions</h2><span>{era.seasonCount} titles</span></div>
+        <ul className="title-tally" aria-label="Titles by manager">
+          {titleCounts.map((c) => (
+            <li key={c.managerId}>
+              <ManagerLink id={c.managerId} badge>{managers.get(c.managerId)?.name}</ManagerLink>
+              <b>{c.titles}</b>
+            </li>
           ))}
-        </div>
+        </ul>
+        <ol className="champion-list">
+          {champions.map((c) => (
+            <li key={c.year}>
+              <button onClick={() => onSeason(c.year)} aria-label={`${c.year} champion: ${c.team}, managed by ${label(c.managerId)}`}>
+                <span className="champion-year">{c.year}</span>
+                <strong>{c.team}</strong>
+                <small>{label(c.managerId)}</small>
+              </button>
+            </li>
+          ))}
+        </ol>
       </section>
 
       <section id="careers" className="panel">
@@ -161,7 +168,6 @@ export default function RecordBook({ eraKey, onEra, onSeason }: { eraKey: string
             </select>
           </label>
         </div>
-        <p className="method-note">W–L–T and win %: regular season only.</p>
         <div className="table-scroll career-scroll" role="region" aria-label="Career standings, scroll horizontally for all statistics" tabIndex={0}>
           <table className="career-table">
             <thead><tr>{careerColumns.map((h) => <th key={h} scope="col">{h}</th>)}</tr></thead>
@@ -190,8 +196,8 @@ export default function RecordBook({ eraKey, onEra, onSeason }: { eraKey: string
         {!rows.length && <p role="status">No managers match. Try a different name or minimum season count.</p>}
         <details className="stats-details">
           <summary>About these stats</summary>
-          <p>Sorted by {sorts.find((s) => s.key === sort)?.label.toLowerCase()}, then name for ties. Win % = (wins + ½ ties) ÷ games. Lower average finishes are better.</p>
-          <p>“2nd” and “Top 4” use final playoff placement; “Reg. #1” uses regular-season standings. Small sample means fewer than 3 seasons in this era. Average finish is raw placement, not normalized for 10- versus 12-team leagues.</p>
+          <p>W–L–T and win % are regular season only. Sorted by {sorts.find((s) => s.key === sort)?.label.toLowerCase()}, then name for ties. Win % = (wins + ½ ties) ÷ games. Lower average finishes are better.</p>
+          <p>“2nd” and “Top 4” use final playoff placement; “Reg. #1” uses regular-season standings. Small sample means fewer than 3 seasons. Average finish is raw placement, not normalized for 10- versus 12-team leagues.</p>
         </details>
       </section>
 
@@ -203,7 +209,6 @@ export default function RecordBook({ eraKey, onEra, onSeason }: { eraKey: string
             {[...era.careers].sort((a, b) => label(a.managerId).localeCompare(label(b.managerId))).map((c) => <option key={c.managerId} value={c.managerId}>{label(c.managerId)}</option>)}
           </select>
         </label>
-        <p className="method-note">Regular season only · From the selected manager’s perspective.</p>
         <div className="table-scroll" role="region" aria-label="Head-to-head records" tabIndex={0}>
           <table className="compact-table">
             <thead><tr><th scope="col">Opponent</th><th scope="col">W–L–T</th><th scope="col">Games</th><th scope="col">Win %</th></tr></thead>
@@ -224,15 +229,14 @@ export default function RecordBook({ eraKey, onEra, onSeason }: { eraKey: string
         </div>
         <details className="stats-details">
           <summary>About these stats</summary>
-          <p>Playoffs and consolation are excluded. Small sample means fewer than 5 games. All {era.verifiedGames.toLocaleString()} games in this era reconcile to the archived standings.</p>
+          <p>Regular season only, from the selected manager’s side. Playoffs and consolation are excluded; open a rivalry for every game. Small sample means fewer than 5 games. All {era.verifiedGames.toLocaleString()} games reconcile to the archived standings.</p>
         </details>
       </section>
 
-      <section id="playoffs">
+      <section id="playoffs" className="panel">
         <div className="section-heading"><h2>Playoffs & luck</h2></div>
-        <div className="two-column">
-          <section className="panel">
-            <h3>Playoff records</h3>
+        <Tabbed label="Playoffs and luck" tabs={[
+          { id: "playoffs", label: "Playoff records", content: (
             <div className="table-scroll" role="region" aria-label="Playoff records" tabIndex={0}>
               <table className="compact-table">
                 <thead><tr><th scope="col">Manager</th><th scope="col">W–L</th><th scope="col">Title games</th><th scope="col">Titles</th></tr></thead>
@@ -245,9 +249,8 @@ export default function RecordBook({ eraKey, onEra, onSeason }: { eraKey: string
                 </tbody>
               </table>
             </div>
-          </section>
-          <section className="panel">
-            <h3>Luck</h3>
+          ) },
+          { id: "luck", label: "Luck", content: (
             <div className="table-scroll" role="region" aria-label="Luck" tabIndex={0}>
               <table className="compact-table">
                 <thead><tr><th scope="col">Manager</th><th scope="col">Wins</th><th scope="col">Expected</th><th scope="col">Luck</th></tr></thead>
@@ -263,68 +266,56 @@ export default function RecordBook({ eraKey, onEra, onSeason }: { eraKey: string
                 </tbody>
               </table>
             </div>
-          </section>
-        </div>
+          ) },
+        ]} />
         <details className="stats-details">
           <summary>About these stats</summary>
           <p>Playoff records count bracket games only: semifinals, the final and the third-place game. Consolation games are excluded. Title games are appearances in the final.</p>
-          <p>All-play compares each week's score with every other team's score that week, as if you had played everyone. Expected wins add up each week's all-play win share. Luck is actual regular-season wins (ties count half) minus expected wins. Positive means the schedule helped. Across the league, luck sums to zero.</p>
+          <p>All-play compares each week's score with every other team's score that week, as if you had played everyone. Expected wins add up each week's all-play win share. Luck is actual regular-season wins (ties count half) minus expected wins; positive means the schedule helped. Across the league, luck sums to zero.</p>
         </details>
       </section>
 
-      <section id="highs">
+      <section id="highs" className="panel">
         <div className="section-heading"><h2>Highs & lows</h2></div>
-        <p className="method-note">Top 10 regular-season results · Points are not era-adjusted. See season Settings for scoring rules.</p>
-        <div className="two-column">
-          <section className="panel"><h3>Highest-scoring seasons</h3>{highTable(era.highSeasons, "season")}</section>
-          <section className="panel"><h3>Highest-scoring weeks</h3>{highTable(era.highWeeks, "week")}</section>
-          <section className="panel"><h3>Lowest-scoring weeks</h3>{highTable(era.lowWeeks, "week")}</section>
-          <section className="panel"><h3>Biggest blowouts</h3><MarginTable games={era.blowouts} label="Biggest blowouts" /></section>
-          <section className="panel"><h3>Closest games</h3><MarginTable games={era.closestGames} label="Closest games" /></section>
-        </div>
+        <Tabbed label="Highs and lows" tabs={[
+          { id: "seasons", label: "Best seasons", content: highTable(era.highSeasons, "season") },
+          { id: "weeks", label: "Best weeks", content: highTable(era.highWeeks, "week") },
+          { id: "lows", label: "Worst weeks", content: highTable(era.lowWeeks, "week") },
+          { id: "blowouts", label: "Blowouts", content: <MarginTable games={era.blowouts} label="Biggest blowouts" /> },
+          { id: "closest", label: "Closest games", content: <MarginTable games={era.closestGames} label="Closest games" /> },
+        ]} />
+        <p className="method-note">Top 10 regular-season results. Points are not adjusted across seasons; see each season's Settings for its scoring rules.</p>
       </section>
 
-      <section id="draft-value">
-        <div className="section-heading"><h2>Draft value</h2></div>
-        <p className="method-note">Points each pick scored as a starter for the team that drafted him that season, playoffs included.</p>
-        <div className="two-column">
-          <section className="panel"><h3>Best picks</h3><PickTable picks={era.bestPicks} label="Best picks" /></section>
-          <section className="panel"><h3>Best late-round picks (round 8+)</h3><PickTable picks={era.lateRoundPicks} label="Best late-round picks" /></section>
-        </div>
+      <section id="draft" className="panel">
+        <div className="section-heading"><h2>Draft</h2></div>
+        <Tabbed label="Draft records" tabs={[
+          { id: "best", label: "Best picks", content: <PickTable picks={era.bestPicks} label="Best picks" /> },
+          { id: "late", label: "Late-round gems", content: <PickTable picks={era.lateRoundPicks} label="Best late-round picks" /> },
+          { id: "drafted", label: "Most drafted", content: <ol className="ranked-list">{era.drafted.map((p) => <li key={p.player}><span>{p.player}</span><strong>{p.picks} picks</strong></li>)}</ol> },
+        ]} />
+        <p className="method-note">Pick value is the points a player scored as a starter for the team that drafted him that season, playoffs included. Late-round gems are from round 8 on.</p>
       </section>
 
-      <section id="activity">
-        <div className="section-heading"><h2>Draft & activity</h2></div>
-        <div className="two-column">
-          <section className="panel">
-            <h3>Most-drafted players & defenses</h3>
-            <ol className="ranked-list">{era.drafted.map((p) => <li key={p.player}><span>{p.player}</span><strong>{p.picks} picks</strong></li>)}</ol>
-          </section>
-          <section className="panel">
-            <h3>Activity ledger</h3>
-            <p className="method-note">Transaction rows, not unique events; includes lineup changes.</p>
+      <section id="activity" className="panel">
+        <div className="section-heading"><h2>Activity</h2></div>
+        <Tabbed label="Activity records" tabs={[
+          { id: "moves", label: "Most moves", content: highTable(era.mostMoves, "moves") },
+          { id: "trades", label: "Most trades", content: highTable(era.mostTrades, "trades") },
+          { id: "ledger", label: "Activity ledger", content: (
             <dl className="activity-ledger">
               {Object.entries(era.activity).sort((a, b) => b[1] - a[1]).map(([type, count]) => <div key={type}><dt>{type}</dt><dd>{count.toLocaleString()}</dd></div>)}
             </dl>
-          </section>
-          <section className="panel"><h3>Most moves in a season</h3>{highTable(era.mostMoves, "moves")}</section>
-          <section className="panel">
-            <h3>Most trades in a season</h3>
-            <p className="method-note">Trades count for each participant.</p>
-            {highTable(era.mostTrades, "trades")}
-          </section>
-        </div>
-        <details className="stats-details">
-          <summary>About these stats</summary>
-          <p>Draft counts are archived selections in the selected era, not draft-value grades. Move and trade totals use the NFL owners-page counters, linked through season account identities. In the activity ledger, one trade can produce multiple rows.</p>
-        </details>
+          ) },
+        ]} />
+        <p className="method-note">Moves and trades in a season come from the NFL owners-page counters; trades count for each participant. The ledger counts transaction rows, not unique events, lineup changes included.</p>
       </section>
 
       <section id="methodology" className="methodology">
         <h2>About the data</h2>
         <details className="stats-details">
-          <summary>About these stats</summary>
-          <p>Era filters include only results within the selected years. No strength-of-competition weighting is applied. Teams, scoring rules and season lengths changed over time.</p>
+          <summary>How the record book is built</summary>
+          <p>Every season counts equally. No strength-of-competition weighting is applied; teams, scoring rules and season lengths changed over time.</p>
           <p>Managers are linked across seasons using stable NFL account identities and commissioner-confirmed names. The 24 archived accounts represent 23 managers: Peter Puzio’s 2011 account is combined with his main account by explicit confirmation. Krystian B. and Krystian P., Daniel B. and Daniel F., and Peter Puzio and Peter Polan remain separate people. Co-managers are not credited separately.</p>
           <p>Career finishes come from final and regular-season standings. Championship history is checked against the NFL almanac. Head-to-head results use weekly schedules and are checked against each team’s W–L–T. Transaction authors use archived account identities, not first-name matching. Missing values are not treated as zero.</p>
           <p>These are historical records, not a ranking of skill or luck. Confirmed display corrections are applied to public data; the original source archive remains unchanged.</p>
