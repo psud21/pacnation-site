@@ -84,6 +84,11 @@ types) keep literal colours, in their own classes.
 
 - **Text floor:** nothing renders below `--text-xs` (12px); unsized `<small>`
   elements are clamped to it.
+- **Dark mode:** the dark values of the tokens live in one block near the end
+  of `globals.css` (`:root[data-theme="dark"]`, screen only, so printing stays
+  light). A script in `index.html` sets the theme before first paint from the
+  saved choice (`localStorage` key `pn-theme`), else the device setting;
+  `ThemeToggle` switches it. Add a dark value for any new token.
 - **Links between pages** use `.archive-link` (via the `Link`, `ManagerLink`,
   `PlayerLink` and `RivalryLink` components). Their underline is blended from
   the text colour, so it shows on cream and navy alike.
@@ -96,7 +101,6 @@ types) keep literal colours, in their own classes.
 | `replay` | `1` | On a season's Standings tab, start the week-by-week replay |
 | `id` | manager key (`manager-07`) or NFL player ID | The manager or player shown |
 | `a`, `b` | manager keys | The two sides of a rivalry |
-| `era` | `all`, `early` (2010–2015), `modern` (2016–2025) | Record-book era |
 | `year` | `2010`–`2025` | Season or yearbook (defaults to the latest) |
 | `section` | `Overview`, `Standings`, `Draft`, `Matchups`, `Transactions`, `Settings` | Season tab |
 | `week`, `game` | week number, matchup ID | Selected matchup on the Matchups tab |

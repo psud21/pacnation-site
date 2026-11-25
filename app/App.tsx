@@ -4,6 +4,7 @@ import { useJson } from "./data";
 import Home from "./Home";
 import { PageFade, useTabIndicator } from "./motion";
 import Search from "./Search";
+import ThemeToggle from "./ThemeToggle";
 import Yearbook from "./season/Yearbook";
 import ManagerPage from "./managers/ManagerPage";
 import ManagersIndex from "./managers/ManagersIndex";
@@ -21,7 +22,6 @@ import { useArchiveQuery } from "./useArchiveQuery";
 
 const tabs = ["Overview", "Standings", "Draft", "Matchups", "Transactions", "Settings"] as const;
 type Tab = (typeof tabs)[number];
-const eraKeys = ["all", "early", "modern"];
 const views = ["home", "all-time", "season", "yearbook", "managers", "manager", "rivalry", "players", "player"] as const;
 type View = (typeof views)[number];
 
@@ -192,11 +192,7 @@ export default function App() {
       case "player": return <PlayerPage key={params.id} id={params.id ?? ""} />;
       default:
         return (
-          <RecordBook
-            eraKey={eraKeys.includes(params.era) ? params.era : "all"}
-            onEra={(era) => navigate({ era })}
-            onSeason={(y) => open({ view: "season", year: y, section: "Overview" })}
-          />
+          <RecordBook onSeason={(y) => open({ view: "season", year: y, section: "Overview" })} />
         );
     }
   }
@@ -217,6 +213,7 @@ export default function App() {
           </button>
           <div className="topbar-tools">
             <Search league={loaded} />
+            <ThemeToggle />
             <div className="archive-range"><span>{league.firstSeason}</span><i /> <span>{league.lastSeason}</span></div>
           </div>
         </header>

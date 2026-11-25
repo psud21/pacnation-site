@@ -3,8 +3,8 @@ import type { SeasonData } from "../types";
 
 // Emphasis form: the selected team in the accent ink, every other team in a
 // recessive gray (>= 2:1 on the card). Ties count as half a win.
-const ACCENT = "#0c1830";
-const CONTEXT = "#b9b2a3";
+const ACCENT = "var(--chart-accent)";
+const CONTEXT = "var(--chart-context)";
 const HEIGHT = 260;
 
 type Line = { teamId: string; team: string; wins: number[] };
@@ -180,17 +180,17 @@ export default function StandingsRace({ season, autoReplay = false }: { season: 
               <text key={week} x={x(i)} y={HEIGHT - 8} textAnchor="middle" className="race-tick">{narrow ? week : `W${week}`}</text>
             ))}
             {lines.filter((l) => l.teamId !== focus.teamId).map((line) => (
-              <path key={line.teamId} d={path(line)} fill="none" stroke={CONTEXT} strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
+              <path key={line.teamId} d={path(line)} fill="none" style={{ stroke: CONTEXT }} strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
             ))}
-            <path d={path(focus)} fill="none" stroke={ACCENT} strokeWidth={2.5} strokeLinejoin="round" strokeLinecap="round" />
-            <circle cx={x(shown)} cy={y(focus.wins[shown])} r={5} fill={ACCENT} stroke="var(--card)" strokeWidth={2} />
+            <path d={path(focus)} fill="none" style={{ stroke: ACCENT }} strokeWidth={2.5} strokeLinejoin="round" strokeLinecap="round" />
+            <circle cx={x(shown)} cy={y(focus.wins[shown])} r={5} style={{ fill: ACCENT, stroke: "var(--card)" }} strokeWidth={2} />
             {!narrow && (
               <text x={x(shown) + 10} y={y(focus.wins[shown])} dy="0.32em" className="race-label">
                 {focus.team.length > 20 ? `${focus.team.slice(0, 19)}…` : focus.team} · {fmt(focus.wins[shown])}
               </text>
             )}
             {hover != null && <line x1={x(hover)} x2={x(hover)} y1={margin.top} y2={margin.top + plotH} className="race-crosshair" />}
-            {hover != null && <circle cx={x(hover)} cy={y(focus.wins[hover])} r={4} fill={ACCENT} stroke="var(--card)" strokeWidth={2} />}
+            {hover != null && <circle cx={x(hover)} cy={y(focus.wins[hover])} r={4} style={{ fill: ACCENT, stroke: "var(--card)" }} strokeWidth={2} />}
             <rect x={margin.left - 10} y={margin.top} width={plotW + 20} height={plotH} fill="transparent" onPointerMove={pick} onPointerDown={pick} onPointerLeave={() => setHover(null)} />
           </svg>}
           {readout && hover != null && (
