@@ -1,6 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ArchiveContext, type Archive } from "./archive";
 import { useJson } from "./data";
+import Home from "./Home";
+import { PageFade, useTabIndicator } from "./motion";
+import Search from "./Search";
+import Yearbook from "./season/Yearbook";
 import ManagerPage from "./managers/ManagerPage";
 import ManagersIndex from "./managers/ManagersIndex";
 import RivalryPage from "./managers/RivalryPage";
@@ -18,7 +22,7 @@ import { useArchiveQuery } from "./useArchiveQuery";
 const tabs = ["Overview", "Standings", "Draft", "Matchups", "Transactions", "Settings"] as const;
 type Tab = (typeof tabs)[number];
 const eraKeys = ["all", "early", "modern"];
-const views = ["all-time", "season", "managers", "manager", "rivalry", "players", "player"] as const;
+const views = ["home", "all-time", "season", "yearbook", "managers", "manager", "rivalry", "players", "player"] as const;
 type View = (typeof views)[number];
 
 // Season files are fetched on demand and kept for the rest of the visit.
@@ -26,7 +30,7 @@ const seasonCache = new Map<number, SeasonData>();
 
 // The data file each page offers in the footer.
 const downloads: Record<View, string> = {
-  "all-time": "all-time.json", season: "", managers: "managers.json", manager: "managers.json",
+  home: "index.json", "all-time": "all-time.json", season: "", yearbook: "", managers: "managers.json", manager: "managers.json",
   rivalry: "games.json", players: "players.json", player: "players.json",
 };
 
@@ -55,7 +59,7 @@ export default function App() {
   const enteredArchive = useRef(false);
   const profiles = useJson<{ managers: ManagerProfile[] }>("managers.json");
 
-  const view: View = views.includes(params.view as View) ? (params.view as View) : "all-time";
+  const view: View = views.includes(params.view as View) ? (params.view as View) : "home";
   const year = league?.seasons.some((s) => s.year === Number(params.year)) ? Number(params.year) : league?.lastSeason ?? 2025;
   const tab: Tab = tabs.includes(params.section as Tab) ? (params.section as Tab) : "Overview";
   const week = Math.max(1, Math.min(18, Number(params.week) || 1));
@@ -101,7 +105,7 @@ export default function App() {
   }, [retry]);
 
   useEffect(() => {
-    if (!ready || view !== "season") return;
+    if (!ready || (view !== "season" && view !== "yearbook")) return;
     const controller = new AbortController();
     setError(null);
     setSeason(seasonCache.get(year) ?? null);
@@ -120,6 +124,7 @@ export default function App() {
     return () => controller.abort();
   }, [year, view, ready, retry]);
 
+  const { nav: tabNav, indicator: tabIndicator } = useTabIndicator(`${view}-${tab}-${!!league}`);
   const managerNames = useMemo(() => new Map(season?.managers.map((m) => [m.teamId, m.manager]) ?? []), [season]);
   const managerOf = (teamId: string) => managerNames.get(teamId);
 
@@ -135,6 +140,7 @@ export default function App() {
   }
   if (!league || !ready || !profiles.data) return <LoadingArchive />;
 
+  const loaded = league; // narrowed: available to the nested render helpers below
   const summary = league.seasons.find((item) => item.year === year)!;
   const years = [...league.seasons.map((s) => s.year)].sort((a, b) => a - b);
   const firstManager = [...archive.managers.values()].sort((a, b) => b.seasons.length - a.seasons.length)[0]?.id ?? "";
@@ -149,7 +155,7 @@ export default function App() {
     // key={year}: filters and searches start fresh for each season.
     switch (tab) {
       case "Overview": return <Overview key={year} season={season} summary={summary} managerOf={managerOf} />;
-      case "Standings": return <Standings key={year} season={season} managerOf={managerOf} />;
+      case "Standings": return <Standings key={year} season={season} managerOf={managerOf} autoReplay={params.replay === "1"} />;
       case "Draft": return <Draft key={year} season={season} round={draftRound} onRound={(round) => navigate({ round })} managerOf={managerOf} />;
       case "Matchups": return <Matchups key={year} season={season} week={week} gameId={params.game ?? null} onWeek={(value) => navigate({ week: value, game: null })} onGame={(game) => navigate({ game })} />;
       case "Transactions": return <Transactions key={year} season={season} />;
@@ -163,12 +169,18 @@ export default function App() {
         return (
           <>
             <div className="season-heading">{tab === "Overview" ? <p>{year} season</p> : <h1>{year} season</h1>}</div>
-            <nav className="section-tabs" aria-label="Season sections">
-              {tabs.map((item) => <button key={item} aria-pressed={item === tab} className={item === tab ? "active" : ""} onClick={() => navigate({ section: item })}>{item}</button>)}
+            <nav className="section-tabs" aria-label="Season sections" ref={tabNav}>
+              {tabs.map((item) => <button key={item} aria-pressed={item === tab} className={item === tab ? "active" : ""} onClick={() => navigate({ section: item, replay: null })}>{item}</button>)}
+              {tabIndicator}
             </nav>
             {seasonContent()}
           </>
         );
+      case "yearbook":
+        return error ? <section className="panel" role="alert"><p>{error}</p></section>
+          : !season || season.year !== year ? <section className="panel" role="status"><h1>Opening {year}…</h1></section>
+          : <Yearbook season={season} summary={summary} managerOf={managerOf} />;
+      case "home": return <Home league={loaded} />;
       case "managers": return <ManagersIndex years={years} />;
       case "manager": return <ManagerPage key={params.id} id={params.id ?? firstManager} years={years} />;
       case "rivalry": {
@@ -192,24 +204,28 @@ export default function App() {
   const railButton = (target: View, label: string, active: boolean) => (
     <button className={`book-button ${active ? "active" : ""}`} aria-pressed={active} onClick={() => open({ view: target })}>{label}</button>
   );
-  const download = view === "season" ? `seasons/${year}.json` : downloads[view];
+  const download = view === "season" || view === "yearbook" ? `seasons/${year}.json` : downloads[view];
 
   return (
     <ArchiveContext.Provider value={archive}>
       <div className="site-shell">
         <a className="skip-link" href="#main-content">Skip to content</a>
         <header className="topbar">
-          <button className="brand" onClick={() => open({ view: "all-time" })} aria-label="PacNation history home">
+          <button className="brand" onClick={() => open({ view: "home" })} aria-label="PacNation history home">
             <span className="brand-mark">PN</span>
             <span><strong>PacNation</strong><small>League archive</small></span>
           </button>
-          <div className="archive-range"><span>{league.firstSeason}</span><i /> <span>{league.lastSeason}</span></div>
+          <div className="topbar-tools">
+            <Search league={loaded} />
+            <div className="archive-range"><span>{league.firstSeason}</span><i /> <span>{league.lastSeason}</span></div>
+          </div>
         </header>
 
         <div className="archive-layout" id="top">
           <aside className="season-rail" aria-label="Season archive">
             <p className="rail-label">Season archive</p>
             <nav className="rail-nav" aria-label="Archive sections">
+              {railButton("home", "Home", view === "home")}
               {railButton("all-time", "Record book", view === "all-time")}
               {railButton("managers", "Managers", view === "managers" || view === "manager" || view === "rivalry")}
               {railButton("players", "Players", view === "players" || view === "player")}
@@ -227,8 +243,8 @@ export default function App() {
             </div>
           </aside>
 
-          <main className="archive-main" id="main-content" tabIndex={-1}>
-            {page()}
+          <main className={`archive-main view-${view}`} id="main-content" tabIndex={-1}>
+            <PageFade routeKey={`${view}-${params.id ?? ""}-${params.a ?? ""}-${params.b ?? ""}-${view === "season" || view === "yearbook" ? year : ""}`}>{page()}</PageFade>
           </main>
         </div>
         <footer>

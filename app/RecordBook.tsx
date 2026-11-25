@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { ManagerLink, PlayerLink, RivalryLink, SeasonLink } from "./archive";
+import Badge from "./Badge";
 import { useJson } from "./data";
 import { formatScore } from "./format";
 import type { Career, HighRecord, MarginGame, PickValue, RecordBookData } from "./types";
@@ -139,7 +140,7 @@ export default function RecordBook({ eraKey, onEra, onSeason }: { eraKey: string
             <button key={c.year} onClick={() => onSeason(c.year)} aria-label={`${c.year} champion: ${c.team}, managed by ${label(c.managerId)}`}>
               <span className="champion-year">{c.year}</span>
               <strong>{c.team}</strong>
-              <small>{label(c.managerId)}</small>
+              <small className="with-badge">{managers.get(c.managerId) && <Badge id={c.managerId} name={managers.get(c.managerId)!.name} />}{label(c.managerId)}</small>
               <span className="timeline-link" aria-hidden="true">→</span>
             </button>
           ))}
@@ -168,7 +169,7 @@ export default function RecordBook({ eraKey, onEra, onSeason }: { eraKey: string
               {rows.map((c) => (
                 <tr key={c.managerId}>
                   <th scope="row">
-                    <strong><ManagerLink id={c.managerId}>{managers.get(c.managerId)?.name}</ManagerLink></strong>
+                    <strong><ManagerLink id={c.managerId} badge>{managers.get(c.managerId)?.name}</ManagerLink></strong>
                     <small>{managers.get(c.managerId)?.team}</small>
                     <small>{c.first}–{c.last}{c.seasons < 3 ? " · Small sample" : ""}</small>
                   </th>

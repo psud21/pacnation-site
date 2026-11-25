@@ -77,12 +77,45 @@ function Versus({ teams, lineups }: { teams: TeamScore[]; lineups: Lineup[] }) {
   );
 }
 
+type Record3 = [number, number, number];
+
+/** Each team's regular-season W-L-T before every week, from the schedule. */
+function recordsBeforeWeek(season: SeasonData): Map<string, Record3> {
+  const cutoff = Math.min(...season.playoffs.map((g) => g.week));
+  const running = new Map<string, Record3>();
+  const out = new Map<string, Record3>();
+  const weeks = [...new Set(season.matchups.map((m) => m.week))].sort((a, b) => a - b);
+  for (const week of weeks) {
+    for (const team of season.standings) out.set(`${week}-${team.teamId}`, [...(running.get(team.teamId) ?? [0, 0, 0])] as Record3);
+    if (week >= cutoff) continue;
+    for (const game of season.matchups.filter((m) => m.week === week)) {
+      const [a, b] = game.teams;
+      if (a.score == null || b.score == null) continue;
+      for (const [own, other] of [[a, b], [b, a]] as const) {
+        const r = running.get(own.teamId) ?? [0, 0, 0];
+        r[own.score! > other.score! ? 0 : own.score! < other.score! ? 1 : 2] += 1;
+        running.set(own.teamId, r);
+      }
+    }
+  }
+  return out;
+}
+
+const winPct = ([w, l, t]: Record3) => (w + l + t ? (w + t / 2) / (w + l + t) : 0.5);
+
 /** ``week`` and ``gameId`` live in the URL; without a gameId the first game of the week is shown. */
 export default function Matchups({ season, week, gameId, onWeek, onGame }: { season: SeasonData; week: number; gameId: string | null; onWeek: (week: number) => void; onGame: (id: string) => void }) {
   const lineupPanel = useRef<HTMLElement>(null);
   const weeks = useMemo(() => [...new Set(season.matchups.map((item) => item.week))].sort((a, b) => a - b), [season]);
   const games = useMemo(() => season.matchups.filter((item) => item.week === week), [season, week]);
   const active = games.find((item) => item.id === gameId) ?? games[0];
+  const before = useMemo(() => recordsBeforeWeek(season), [season]);
+  const cutoff = Math.min(...season.playoffs.map((g) => g.week));
+  const topScorer = (teamId: string) => season.lineups.find((l) => l.week === week && l.teamId === teamId)?.players
+    .filter((p) => p.starter && p.points != null).sort((a, b) => (b.points ?? 0) - (a.points ?? 0))[0];
+  // An upset: from week 4, a regular-season winner whose record going in was at least .200 worse.
+  const isUpset = (winnerId: string, loserId: string) => week >= 4 && week < cutoff
+    && winPct(before.get(`${week}-${winnerId}`) ?? [0, 0, 0]) + 0.2 <= winPct(before.get(`${week}-${loserId}`) ?? [0, 0, 0]);
   const lineups = useMemo(() => {
     if (!active) return [];
     const teamIds = new Set(active.teams.map((team) => team.teamId));
@@ -107,16 +140,36 @@ export default function Matchups({ season, week, gameId, onWeek, onGame }: { sea
           ))}
         </div>
         <div className="matchup-grid">
-          {games.map((matchup) => (
-            <button key={matchup.id} aria-pressed={active?.id === matchup.id} className={`matchup-card ${active?.id === matchup.id ? "active" : ""}`} onClick={() => choose(matchup.id)}>
-              {matchup.teams.map((team) => (
-                <span key={team.teamId}>
-                  <em>{team.team}{isWinner(team, matchup.teams) && <small className="win-badge">Winner</small>}</em>
-                  <strong>{formatScore(team.score)}</strong>
-                </span>
-              ))}
-            </button>
-          ))}
+          {games.map((matchup) => {
+            const [a, b] = matchup.teams;
+            const total = (a.score ?? 0) + (b.score ?? 0);
+            return (
+              <button key={matchup.id} aria-pressed={active?.id === matchup.id} className={`matchup-card ${active?.id === matchup.id ? "active" : ""}`} onClick={() => choose(matchup.id)}>
+                {matchup.teams.map((team) => {
+                  const other = matchup.teams.find((t) => t.teamId !== team.teamId);
+                  const won = isWinner(team, matchup.teams);
+                  const star = topScorer(team.teamId);
+                  return (
+                    <span key={team.teamId}>
+                      <em>
+                        {team.team}
+                        {won && <small className="win-badge">Winner</small>}
+                        {won && other && isUpset(team.teamId, other.teamId) && <small className="upset-badge">Upset</small>}
+                        {star && <small className="top-scorer">Top: {star.player} {formatScore(star.points)}</small>}
+                      </em>
+                      <strong>{formatScore(team.score)}</strong>
+                    </span>
+                  );
+                })}
+                {total > 0 && (
+                  <span className="margin-bar" aria-hidden="true">
+                    <i style={{ width: `${((a.score ?? 0) / total) * 100}%` }} className={isWinner(a, matchup.teams) ? "won" : ""} />
+                    <i style={{ width: `${((b.score ?? 0) / total) * 100}%` }} className={isWinner(b, matchup.teams) ? "won" : ""} />
+                  </span>
+                )}
+              </button>
+            );
+          })}
         </div>
         {!games.length && <p role="status">No archived games for this week. Choose a listed week above.</p>}
       </section>

@@ -27,7 +27,7 @@ export default function FinishStrip({ seasons, years, compact = false }: { seaso
   const byYear = new Map(seasons.map((season) => [season.year, season]));
   return (
     <div className={`finish-strip${compact ? " compact" : ""}`} role="list" aria-label="Final place by season" style={{ gridTemplateColumns: `repeat(${years.length}, minmax(0, 1fr))` }}>
-      {years.map((year) => {
+      {years.map((year, index) => {
         const season = byYear.get(year);
         const short = `’${String(year).slice(2)}`;
         if (!season || season.final == null) {
@@ -40,7 +40,7 @@ export default function FinishStrip({ seasons, years, compact = false }: { seaso
         }
         const text = describeSeason(season);
         return (
-          <span role="listitem" className="finish-col" key={year} aria-label={text} title={compact ? text : undefined}>
+          <span role="listitem" className="finish-col" key={year} aria-label={text} title={compact ? text : undefined} style={{ ["--i" as string]: index }}>
             <span className={`finish-cell bin-${binOf(season.final).key}`} tabIndex={compact ? undefined : 0} data-tip={compact ? undefined : text}>
               {!compact && <b aria-hidden="true">{season.final}</b>}
             </span>

@@ -1,4 +1,5 @@
 import { createContext, useContext, type MouseEvent, type ReactNode } from "react";
+import Badge from "./Badge";
 import type { ManagerProfile } from "./types";
 import { queryString, type QueryParams } from "./useArchiveQuery";
 
@@ -24,11 +25,12 @@ export function Link({ to, children, className = "archive-link", label }: { to: 
   return <a href={`?${queryString(to)}`} className={className} onClick={onClick} aria-label={label}>{children}</a>;
 }
 
-export function ManagerLink({ id, children }: { id?: string; children?: ReactNode }) {
+export function ManagerLink({ id, children, badge = false }: { id?: string; children?: ReactNode; badge?: boolean }) {
   const { managers } = useArchive();
   const manager = id ? managers.get(id) : undefined;
   if (!id || !manager) return <>{children ?? "Unidentified manager"}</>;
-  return <Link to={{ view: "manager", id }}>{children ?? manager.label}</Link>;
+  const link = <Link to={{ view: "manager", id }}>{children ?? manager.label}</Link>;
+  return badge ? <span className="with-badge"><Badge id={id} name={manager.name} />{link}</span> : link;
 }
 
 /** Link a manager named in a season page, found by season and NFL team ID. */

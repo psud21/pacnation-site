@@ -4,7 +4,7 @@ import StandingsRace from "../charts/StandingsRace";
 import { lower, score } from "../format";
 import type { SeasonData } from "../types";
 
-export default function Standings({ season, managerOf }: { season: SeasonData; managerOf: (teamId: string) => string | undefined }) {
+export default function Standings({ season, managerOf, autoReplay = false }: { season: SeasonData; managerOf: (teamId: string) => string | undefined; autoReplay?: boolean }) {
   const [search, setSearch] = useState("");
   const query = search.toLowerCase();
   const rows = season.standings.filter((item) => lower(`${item.team} ${managerOf(item.teamId) ?? ""}`).includes(query));
@@ -39,7 +39,7 @@ export default function Standings({ season, managerOf }: { season: SeasonData; m
         <summary>About these stats</summary>
         <p>Records and points are regular season only. Reg. rank is before the playoffs; Final is placement after the postseason. PF = points for; PA = points against.</p>
       </details>
-      <StandingsRace season={season} />
+      <StandingsRace season={season} autoReplay={autoReplay} />
     </section>
   );
 }

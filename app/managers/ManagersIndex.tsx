@@ -1,4 +1,5 @@
 import { Link, useArchive } from "../archive";
+import Badge from "../Badge";
 import FinishStrip, { FinishLegend } from "../charts/FinishStrip";
 
 /** Every manager as a card: seasons, titles, record and a compact finish history. */
@@ -20,7 +21,7 @@ export default function ManagersIndex({ years }: { years: number[] }) {
           return (
             <Link key={manager.id} to={{ view: "manager", id: manager.id }} className="manager-card">
               <span className="manager-card-head">
-                <strong>{manager.label}</strong>
+                <strong className="with-badge"><Badge id={manager.id} name={manager.name} size="md" />{manager.label}</strong>
                 {titles > 0 && <span className="title-count">{titles} {titles === 1 ? "title" : "titles"}</span>}
               </span>
               <small>{manager.team}</small>

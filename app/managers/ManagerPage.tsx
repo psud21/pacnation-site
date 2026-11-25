@@ -1,8 +1,11 @@
 import { useMemo } from "react";
 import { Link, ManagerLink, PlayerLink, RivalryLink, SeasonLink, useArchive } from "../archive";
+import Badge from "../Badge";
 import FinishStrip, { FinishLegend } from "../charts/FinishStrip";
 import { useJson } from "../data";
 import { formatScore, ordinal, score } from "../format";
+import { CountUp } from "../motion";
+import ShareButton from "../ShareButton";
 import type { ArchiveGame, ManagerWeek, RecordBookData } from "../types";
 
 type Rival = { opponentId: string; wins: number; losses: number; ties: number; playoffWins: number; playoffLosses: number; games: number };
@@ -22,6 +25,20 @@ export function rivalsOf(games: ArchiveGame[], id: string): Rival[] {
     table.set(other.managerId, row);
   }
   return [...table.values()].sort((a, b) => b.games - a.games || b.wins - a.wins);
+}
+
+type NameEra = { team: string; start: number; end: number; titles: number[] };
+
+/** Consecutive seasons under the same team name, oldest first. */
+function nameHistory(seasons: { year: number; team: string; final: number | null }[]): NameEra[] {
+  const eras: NameEra[] = [];
+  for (const s of seasons) {
+    const current = eras[eras.length - 1];
+    if (current && current.team === s.team && current.end === s.year - 1) current.end = s.year;
+    else eras.push({ team: s.team, start: s.year, end: s.year, titles: [] });
+    if (s.final === 1) eras[eras.length - 1].titles.push(s.year);
+  }
+  return eras;
 }
 
 const pct = (wins: number, losses: number, ties = 0) => (wins + losses + ties ? `${((100 * (wins + ties / 2)) / (wins + losses + ties)).toFixed(1)}%` : "—");
@@ -63,13 +80,13 @@ export default function ManagerPage({ id, years }: { id: string; years: number[]
   return (
     <div className="content-stack profile">
       <header className="profile-heading">
-        <p className="eyebrow">Manager</p>
-        <h1>{manager.label}</h1>
+        <div className="heading-row"><p className="eyebrow">Manager</p><ShareButton path={`manager/${manager.id}`} title={`${manager.label} · PacNation`} /></div>
+        <h1 className="with-badge"><Badge id={manager.id} name={manager.name} size="lg" />{manager.label}</h1>
         <p>{first === last ? first : `${first}–${last}`} · {manager.seasons.length} {manager.seasons.length === 1 ? "season" : "seasons"} · {teams.length} team {teams.length === 1 ? "name" : "names"} · latest: {manager.team}</p>
       </header>
 
       <section className="stat-tiles" aria-label="Career summary">
-        <div><span>Titles</span><strong>{titles}</strong><small>{manager.titleGames} title {manager.titleGames === 1 ? "game" : "games"}</small></div>
+        <div><span>Titles</span><strong><CountUp value={titles} /></strong><small>{manager.titleGames} title {manager.titleGames === 1 ? "game" : "games"}</small></div>
         {career && <div><span>Regular season</span><strong>{career.wins}–{career.losses}{career.ties ? `–${career.ties}` : ""}</strong><small>{pct(career.wins, career.losses, career.ties)} win rate</small></div>}
         {career && <div><span>Playoffs</span><strong>{career.playoffWins}–{career.playoffLosses}</strong><small>bracket games only</small></div>}
         {career && <div><span>Luck</span><strong>{signed(career.luck)}</strong><small>wins vs. {career.expectedWins.toFixed(1)} expected from all-play</small></div>}
@@ -79,6 +96,16 @@ export default function ManagerPage({ id, years }: { id: string; years: number[]
         <div className="section-heading"><h2>Finish history</h2><span>{years[0]}–{years[years.length - 1]}</span></div>
         <FinishStrip seasons={manager.seasons} years={years} />
         <FinishLegend />
+        <h3 className="subheading">Team names</h3>
+        <ol className="name-timeline">
+          {nameHistory(manager.seasons).map((era) => (
+            <li key={`${era.start}-${era.team}`} className={era.titles.length ? "has-title" : ""}>
+              <span className="name-years">{era.start === era.end ? era.start : `${era.start}–${era.end}`}</span>
+              <strong>{era.team}</strong>
+              {era.titles.length > 0 && <span className="name-titles">Champion {era.titles.join(", ")}</span>}
+            </li>
+          ))}
+        </ol>
         <div className="table-scroll" role="region" aria-label="Seasons" tabIndex={0}>
           <table className="compact-table profile-seasons">
             <thead><tr><th scope="col">Season</th><th scope="col">Team</th><th scope="col">Final</th><th scope="col">Reg. rank</th><th scope="col">W–L–T</th><th scope="col">PF</th><th scope="col">PA</th><th scope="col">Moves</th><th scope="col">Trades</th></tr></thead>
@@ -116,7 +143,7 @@ export default function ManagerPage({ id, years }: { id: string; years: number[]
               <tbody>
                 {rivals.map((r) => (
                   <tr key={r.opponentId}>
-                    <td><RivalryLink a={id} b={r.opponentId}>{managers.get(r.opponentId)?.label ?? "Unidentified manager"}</RivalryLink></td>
+                    <td><span className="with-badge">{managers.get(r.opponentId) && <Badge id={r.opponentId} name={managers.get(r.opponentId)!.name} />}<RivalryLink a={id} b={r.opponentId}>{managers.get(r.opponentId)?.label ?? "Unidentified manager"}</RivalryLink></span></td>
                     <td className="nowrap">{r.wins}–{r.losses}–{r.ties}</td>
                     <td>{pct(r.wins, r.losses, r.ties)}</td>
                     <td>{r.playoffWins + r.playoffLosses ? `${r.playoffWins}–${r.playoffLosses}` : "—"}</td>
