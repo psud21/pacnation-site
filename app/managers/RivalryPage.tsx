@@ -1,5 +1,7 @@
 import { useMemo } from "react";
 import { Link, ManagerLink, SeasonLink, useArchive } from "../archive";
+import Badge from "../Badge";
+import ShareButton from "../ShareButton";
 import { useJson } from "../data";
 import { formatScore } from "../format";
 import type { ArchiveGame } from "../types";
@@ -57,8 +59,15 @@ export default function RivalryPage({ a, b, onChange }: { a: string; b: string; 
   return (
     <div className="content-stack profile">
       <header className="profile-heading">
-        <p className="eyebrow">Rivalry</p>
-        <h1>{left?.label ?? "?"} <span className="versus-word">vs</span> {right?.label ?? "?"}</h1>
+        <div className="heading-row">
+          <p className="eyebrow">Rivalry</p>
+          {a !== b && left && right && <ShareButton path={`rivalry/${[a, b].sort().join("--")}`} title={`${left.label} vs ${right.label}`} />}
+        </div>
+        <h1 className="rivalry-title">
+          <span className="with-badge">{left && <Badge id={left.id} name={left.name} size="lg" />}{left?.label ?? "?"}</span>
+          <span className="versus-word">vs</span>
+          <span className="with-badge">{right && <Badge id={right.id} name={right.name} size="lg" />}{right?.label ?? "?"}</span>
+        </h1>
         <div className="rivalry-pickers">
           <label>Manager<select value={a} onChange={(e) => onChange(e.target.value, b)}>{options.map((m) => <option key={m.id} value={m.id}>{m.label}</option>)}</select></label>
           <button className="action" onClick={() => onChange(b, a)} aria-label="Swap sides">⇄</button>

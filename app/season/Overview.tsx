@@ -1,4 +1,5 @@
-import { TeamManagerLink } from "../archive";
+import { Link, TeamManagerLink } from "../archive";
+import ShareButton from "../ShareButton";
 import { formatScore, isWinner, ordinal, recordLabel, score, whole } from "../format";
 import type { SeasonData, SeasonSummary } from "../types";
 
@@ -35,6 +36,11 @@ export default function Overview({ season, summary, managerOf }: { season: Seaso
           <small>transaction rows, not unique events</small>
         </div>
       </section>
+
+      <div className="season-actions">
+        <ShareButton path={`season/${year}`} title={`The ${year} PacNation season`} />
+        <Link to={{ view: "yearbook", year }}>Open the printable {year} yearbook →</Link>
+      </div>
 
       <div className="content-stack">
         <section className="panel podium-panel">
